@@ -45,15 +45,25 @@ case $DEPLOY_TYPE in
             exit 1
         fi
         
-        echo "构建 Docker 镜像..."
-        docker-compose -f docker-compose.nginx.yml build
+        # 检查是否有git仓库，如果有则拉取最新代码
+        if [ -d ".git" ]; then
+            echo "📥 拉取最新代码..."
+            git pull || echo "⚠️  Git pull 失败，继续使用当前代码"
+        fi
         
-        echo "启动容器..."
+        echo "🔨 构建 Docker 镜像（强制重新构建，不使用缓存）..."
+        docker-compose -f docker-compose.nginx.yml build --no-cache
+        
+        echo "🛑 停止并删除旧容器..."
+        docker-compose -f docker-compose.nginx.yml down
+        
+        echo "🚀 启动新容器..."
         docker-compose -f docker-compose.nginx.yml up -d
         
         echo "✅ Docker 部署完成！"
         echo "访问地址: http://localhost:8080"
         echo "查看日志: docker-compose -f docker-compose.nginx.yml logs -f"
+        echo "查看容器状态: docker ps -a | grep redflow"
         ;;
     
     nginx)

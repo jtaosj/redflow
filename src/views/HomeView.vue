@@ -175,7 +175,7 @@
       <div class="image-mode-right">
         <div v-if="results.length === 0" class="empty-workspace">
           <div class="empty-icon">👋</div>
-          <h3>欢迎使用红流云创 v2.0</h3>
+          <h3>欢迎使用红流云创 v2.1</h3>
           <p>在左侧上传图片开始创作，或点击"AI 智能一键配置"自动规划方案。</p>
         </div>
 

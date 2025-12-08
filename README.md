@@ -165,10 +165,23 @@ npm run build
 cd /opt/redflow-v2
 
 # 3. 使用 Docker Compose 一键部署
-docker-compose -f docker-compose.nginx.yml up -d
+docker-compose -f docker-compose.nginx.yml up -d --build
 
 # 4. 访问应用
 # http://your-server-ip:8080
+```
+
+⚠️ **重要提示**: 如果更新代码后部署的还是旧版本，必须使用 `--no-cache` 强制重新构建：
+
+```bash
+# 使用强制部署脚本（推荐）
+chmod +x deploy-force.sh
+./deploy-force.sh
+
+# 或手动强制重新构建
+docker-compose -f docker-compose.nginx.yml down
+docker-compose -f docker-compose.nginx.yml build --no-cache
+docker-compose -f docker-compose.nginx.yml up -d
 ```
 
 ### 快速部署脚本
@@ -177,6 +190,12 @@ docker-compose -f docker-compose.nginx.yml up -d
 # 使用部署脚本（自动构建并部署）
 chmod +x deploy.sh
 ./deploy.sh docker    # Docker 部署
+
+# 如果更新代码后还是旧版本，使用强制部署脚本
+chmod +x deploy-force.sh
+./deploy-force.sh     # 强制重新构建，不使用缓存
+
+# 其他部署方式
 ./deploy.sh nginx     # Nginx 部署
 ./deploy.sh node      # Node.js 部署
 ```

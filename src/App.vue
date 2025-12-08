@@ -54,7 +54,12 @@
           </div>
           <div>
             <div style="font-size: 14px; font-weight: 600;">红流云创</div>
-            <div style="font-size: 12px; color: var(--text-sub);">v2.1</div>
+            <div style="font-size: 12px; color: var(--text-sub);">
+              v2.1
+              <span v-if="buildTime" style="display: block; font-size: 10px; margin-top: 2px; opacity: 0.7;">
+                {{ formatBuildTime(buildTime) }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -87,6 +92,27 @@
 <script setup lang="ts">
 import { RouterView, RouterLink } from 'vue-router'
 import Toast from './components/ui/Toast.vue'
+import { computed } from 'vue'
+
+// 获取构建时间和版本号（如果已注入）
+const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : null
+const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.1.0'
+
+// 格式化构建时间
+const formatBuildTime = (timeStr: string | null) => {
+  if (!timeStr) return ''
+  try {
+    const date = new Date(timeStr)
+    return date.toLocaleString('zh-CN', { 
+      month: '2-digit', 
+      day: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  } catch {
+    return ''
+  }
+}
 </script>
 
 <style scoped>

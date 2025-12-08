@@ -468,12 +468,30 @@ docker-compose -f docker-compose.nginx.yml up -d --build
 
 ### Q4: 如何更新代码？
 
-**Docker 方式:**
+**Docker 方式（重要：必须使用 --no-cache 强制重新构建）:**
+
+⚠️ **注意**: 如果更新代码后部署的还是旧版本，说明Docker使用了缓存的旧代码。必须使用 `--no-cache` 参数强制重新构建。
+
 ```bash
 cd /opt/redflow-v2
+
+# 方式1: 使用强制部署脚本（推荐）
+chmod +x deploy-force.sh
+./deploy-force.sh
+
+# 方式2: 手动强制重新构建
 git pull  # 或重新上传文件
+docker-compose -f docker-compose.nginx.yml down
+docker-compose -f docker-compose.nginx.yml build --no-cache
+docker-compose -f docker-compose.nginx.yml up -d
+
+# 方式3: 如果只是小更新，可以尝试（不推荐，可能仍使用缓存）
 docker-compose -f docker-compose.nginx.yml up -d --build
 ```
+
+**为什么需要 --no-cache？**
+- Docker构建时会使用缓存层，如果代码更新但依赖文件（package.json）没变，Docker可能使用缓存的旧代码层
+- 使用 `--no-cache` 会强制重新执行所有构建步骤，确保使用最新代码
 
 **Nginx 方式:**
 ```bash

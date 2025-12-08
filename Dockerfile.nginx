@@ -1,4 +1,8 @@
 # 多阶段构建 - Nginx静态文件部署
+# 红流云创 v2.1
+
+ARG VERSION=2.1.0
+
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -17,6 +21,10 @@ RUN npm run build
 
 # 生产阶段 - Nginx
 FROM nginx:alpine
+
+ARG VERSION=2.1.0
+LABEL version="${VERSION}"
+LABEL maintainer="红流云创团队"
 
 # 复制构建产物到nginx目录
 COPY --from=builder /app/dist /usr/share/nginx/html
