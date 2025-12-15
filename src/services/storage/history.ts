@@ -1,0 +1,282 @@
+/**
+ * 历史记录存储服务
+ */
+
+import { GeneratedResult, ProcessingMode } from '../../types'
+import { compressImage } from '../../utils'
+import { STORAGE_KEYS, HISTORY_CONFIG } from '../../config/constants'
+import { logger } from '../../composables/useLogger'
+
+/**
+ * 保存历史记录项
+ */
+export async function saveHistoryItem(
+  userId: string,
+  result: GeneratedResult
+): Promise<void> {
+  try {
+    logger.debug('=== saveHistoryItem 开始:', { userId, resultId: result.id, mode: result.mode })
+    const key = `${STORAGE_KEYS.HISTORY_PREFIX}${userId}`
+    const historyStr = localStorage.getItem(key)
+    let history: GeneratedResult[] = historyStr ? JSON.parse(historyStr) : []
+    logger.debug('当前历史记录数量:', history.length)
+
+    let storedOriginalImage = result.originalImageUrl
+    let storedGeneratedImage = result.generatedImageUrl
+
+    // 对所有模式的图片进行压缩，以节省存储空间
+    if (result.mode === ProcessingMode.IMAGE_TO_IMAGE) {
+      if (result.originalImageFile || result.originalImageUrl) {
+        try {
+          storedOriginalImage = await compressImage(result.originalImageFile || result.originalImageUrl)
+        } catch (e) {
+          logger.warn('Original image compression failed', e)
+        }
+      }
+
+      if (result.generatedImageUrl) {
+        try {
+          storedGeneratedImage = await compressImage(result.generatedImageUrl)
+        } catch (e) {
+          logger.warn('Generated image compression failed', e)
+        }
+      }
+    } else if (result.mode === ProcessingMode.TEXT_TO_IMAGE && result.pages) {
+      // TEXT_TO_IMAGE 模式下，压缩所有页面图片以节省存储空间
+      const compressedPages = await Promise.all(
+        result.pages.map(async (page) => {
+          if (page.imageUrl && page.imageUrl.startsWith('data:')) {
+            try {
+              const compressed = await compressImage(page.imageUrl, 600, 0.6) // 更激进的压缩
+              return { ...page, imageUrl: compressed }
+            } catch (e) {
+              logger.warn(`Page ${page.index} image compression failed`, e)
+              return page
+            }
+          }
+          return page
+        })
+      )
+      result.pages = compressedPages
+    } else if (result.mode === ProcessingMode.PROMPT_TO_IMAGE) {
+      // PROMPT_TO_IMAGE 模式下，压缩生成的图片
+      if (result.generatedImageUrl && result.generatedImageUrl.startsWith('data:')) {
+        try {
+          storedGeneratedImage = await compressImage(result.generatedImageUrl, 600, 0.6)
+        } catch (e) {
+          logger.warn('PROMPT_TO_IMAGE image compression failed', e)
+        }
+      }
+    }
+
+    const itemToSave: GeneratedResult = {
+      ...result,
+      userId,
+      originalImageFile: undefined, // 不保存File对象
+      originalImageUrl: storedOriginalImage,
+      generatedImageUrl: storedGeneratedImage,
+      createdAt: Date.now(),
+    }
+
+    const existingIndex = history.findIndex(h => h.id === result.id)
+    if (existingIndex >= 0) {
+      logger.debug('更新已有历史记录:', existingIndex)
+      history[existingIndex] = itemToSave
+    } else {
+      logger.debug('添加新历史记录')
+      history.unshift(itemToSave)
+    }
+
+    // 先限制历史记录数量，优先保留最新的记录
+    const maxItems = HISTORY_CONFIG.MAX_ITEMS
+    let itemsToSave = history.slice(0, maxItems)
+    
+    const trySetItem = async (items: GeneratedResult[], attempt: number = 0): Promise<void> => {
+      try {
+        const jsonStr = JSON.stringify(items)
+        const sizeInMB = (new Blob([jsonStr]).size / 1024 / 1024).toFixed(2)
+        logger.debug(`保存历史记录到localStorage，数量: ${items.length}, 大小: ${sizeInMB}MB, key: ${key}`)
+        
+        localStorage.setItem(key, jsonStr)
+        logger.info('✅ 历史记录保存成功！')
+      } catch (e: any) {
+        if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+          logger.warn(`Storage quota exceeded (attempt ${attempt + 1}). Current items: ${items.length}`)
+          
+          // 限制最大尝试次数，避免无限递归
+          if (attempt >= 5) {
+            logger.error('达到最大尝试次数，无法保存历史记录')
+            throw new Error('存储空间不足，无法保存历史记录。请清理浏览器缓存或删除旧记录。')
+          }
+          
+          if (items.length > 1) {
+            // 删除最旧的记录（保留最新的）
+            const reducedItems = items.slice(0, items.length - 1)
+            logger.debug(`删除最旧记录，剩余: ${reducedItems.length} 条`)
+            await trySetItem(reducedItems, attempt + 1)
+          } else if (items.length === 1) {
+            // 如果只有一条记录仍然失败，尝试进一步压缩图片
+            logger.warn('单条记录仍然超出限制，尝试进一步压缩图片...')
+            const item = items[0]
+            
+            // 分阶段降低质量和分辨率
+            const compressionLevels = [
+              { width: 500, quality: 0.6 },
+              { width: 400, quality: 0.5 },
+              { width: 300, quality: 0.4 },
+              { width: 200, quality: 0.3 }
+            ]
+            
+            const compressionLevel = compressionLevels[Math.min(attempt, compressionLevels.length - 1)]
+            
+            // 压缩主图片
+            if (item.generatedImageUrl && item.generatedImageUrl.startsWith('data:')) {
+              try {
+                const moreCompressed = await compressImage(
+                  item.generatedImageUrl, 
+                  compressionLevel.width, 
+                  compressionLevel.quality
+                )
+                item.generatedImageUrl = moreCompressed
+              } catch (compressError) {
+                logger.error('压缩 generatedImageUrl 失败:', compressError)
+              }
+            }
+            
+            // 压缩 TEXT_TO_IMAGE 模式下的所有页面图片
+            if (item.mode === ProcessingMode.TEXT_TO_IMAGE && item.pages) {
+              try {
+                const compressedPages = await Promise.all(
+                  item.pages.map(async (page) => {
+                    if (page.imageUrl && page.imageUrl.startsWith('data:')) {
+                      try {
+                        const compressed = await compressImage(
+                          page.imageUrl, 
+                          compressionLevel.width, 
+                          compressionLevel.quality
+                        )
+                        return { ...page, imageUrl: compressed }
+                      } catch (e) {
+                        logger.warn(`压缩页面 ${page.index} 图片失败:`, e)
+                        return page
+                      }
+                    }
+                    return page
+                  })
+                )
+                item.pages = compressedPages
+              } catch (compressError) {
+                logger.error('压缩 pages 图片失败:', compressError)
+              }
+            }
+            
+            // 压缩 originalImageUrl（如果是 base64）
+            if (item.originalImageUrl && item.originalImageUrl.startsWith('data:')) {
+              try {
+                const moreCompressed = await compressImage(
+                  item.originalImageUrl, 
+                  compressionLevel.width, 
+                  compressionLevel.quality
+                )
+                item.originalImageUrl = moreCompressed
+              } catch (compressError) {
+                logger.error('压缩 originalImageUrl 失败:', compressError)
+              }
+            }
+            
+            await trySetItem([item], attempt + 1)
+            return
+            
+            // 尝试删除其他存储项，释放空间
+            if (attempt < 3) {
+              logger.warn('尝试清理其他存储项...')
+              // 只保留最新的历史记录，删除所有其他记录
+              await trySetItem([item], attempt + 1)
+              return
+            }
+            
+            logger.error('Storage full, cannot save even one item after compression attempts.')
+            throw new Error('存储空间不足，无法保存历史记录。请清理浏览器缓存或删除旧记录。')
+          } else {
+            logger.error('Storage full, cannot save even one item.')
+            throw new Error('存储空间不足，无法保存历史记录。请清理浏览器缓存或删除旧记录。')
+          }
+        } else {
+          throw e
+        }
+      }
+    }
+
+    await trySetItem(itemsToSave)
+  } catch (error) {
+    logger.error('❌ Failed to save history:', error)
+    throw error
+  }
+}
+
+/**
+ * 获取用户历史记录
+ */
+export function getUserHistory(userId: string): GeneratedResult[] {
+  const key = `${STORAGE_KEYS.HISTORY_PREFIX}${userId}`
+  const historyStr = localStorage.getItem(key)
+  try {
+    logger.debug('=== getUserHistory 开始加载:', { userId, key })
+    const history = historyStr ? JSON.parse(historyStr) : []
+    logger.debug('=== getUserHistory 成功加载:', { userId, count: history.length })
+    if (import.meta.env.DEV) {
+      logger.debug('原始localStorage数据:', historyStr?.substring(0, 500) + '...')
+      if (history.length > 0) {
+        logger.debug('第一条历史记录预览:', history[0])
+      }
+    }
+    return history
+  } catch (e) {
+    logger.error('❌ 解析历史记录失败，可能数据损坏:', e)
+    localStorage.removeItem(key) // 清除损坏的数据
+    return []
+  }
+}
+
+/**
+ * 获取所有用户的历史记录（管理员功能）
+ */
+export function getAllUsersHistory(): GeneratedResult[] {
+  const allHistory: GeneratedResult[] = []
+  const usersStr = localStorage.getItem(STORAGE_KEYS.USERS)
+  const users = usersStr ? JSON.parse(usersStr) : []
+  
+  for (const user of users) {
+    const userHistory = getUserHistory(user.id)
+    allHistory.push(...userHistory)
+  }
+  
+  // 按创建时间排序
+  return allHistory.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+}
+
+/**
+ * 删除历史记录
+ */
+export function deleteHistoryItem(userId: string, itemId: string): boolean {
+  try {
+    const key = `${STORAGE_KEYS.HISTORY_PREFIX}${userId}`
+    const historyStr = localStorage.getItem(key)
+    if (!historyStr) return false
+    
+    const history: GeneratedResult[] = JSON.parse(historyStr)
+    const filtered = history.filter(item => item.id !== itemId)
+    
+    if (filtered.length === history.length) {
+      return false // 没有找到要删除的项
+    }
+    
+    localStorage.setItem(key, JSON.stringify(filtered))
+    logger.debug('历史记录已删除:', itemId)
+    return true
+  } catch (e) {
+    logger.error('删除历史记录失败:', e)
+    return false
+  }
+}
+
