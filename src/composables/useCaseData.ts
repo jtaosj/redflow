@@ -14,7 +14,7 @@ const mockCases: CaseItem[] = [
     description: '小红书爆款秋季穿搭，ins极简风格，清新自然',
     category: 'fashion',
     style: 'ins_minimal',
-    imageUrl: '/src/assets/style-examples/ins_minimal.png',
+    imageUrl: '/style-examples/ins_minimal.png',
     config: {
       prompt: 'A minimalist fashion lookbook, 3:4, 2048x2730, clean background, soft lighting',
       styleId: 'ins_minimal',
@@ -54,7 +54,7 @@ const mockCases: CaseItem[] = [
     description: '多巴胺风格美食照片，色彩鲜艳，活力四射',
     category: 'food',
     style: 'dopamine',
-    imageUrl: '/src/assets/style-examples/dopamine.png',
+    imageUrl: '/style-examples/dopamine.png',
     config: {
       prompt: 'Vibrant food photography, 3:4, 2048x2730, high saturation, colorful, appetizing',
       styleId: 'dopamine',
@@ -74,7 +74,7 @@ const mockCases: CaseItem[] = [
     description: '自然清新风格，适合旅行和风景分享',
     category: 'travel',
     style: 'nature_fresh',
-    imageUrl: '/src/assets/style-examples/nature_fresh.png',
+    imageUrl: '/style-examples/nature_fresh.png',
     config: {
       prompt: 'Fresh nature landscape, 3:4, 2048x2730, natural lighting, vibrant greens, clear sky',
       styleId: 'nature_fresh',
@@ -94,7 +94,7 @@ const mockCases: CaseItem[] = [
     description: '黑金风格，展现高端奢华感',
     category: 'beauty',
     style: 'black_gold',
-    imageUrl: '/src/assets/style-examples/black_gold.png',
+    imageUrl: '/style-examples/black_gold.png',
     config: {
       prompt: 'Luxury beauty product showcase, 3:4, 2048x2730, black and gold theme, elegant',
       styleId: 'black_gold',
@@ -114,7 +114,7 @@ const mockCases: CaseItem[] = [
     description: '复古怀旧风格，展现年代感',
     category: 'fashion',
     style: 'retro_vintage',
-    imageUrl: '/src/assets/style-examples/retro_vintage.png',
+    imageUrl: '/style-examples/retro_vintage.png',
     config: {
       prompt: 'Retro fashion style, 3:4, 2048x2730, vintage film effect, warm tones',
       styleId: 'retro_vintage',

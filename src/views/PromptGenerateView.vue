@@ -208,7 +208,7 @@ const styleExamples = computed(() => {
   return Object.values(DEFAULT_STYLE_PROMPTS).map(style => ({
     id: style.id,
     name: style.name,
-    imageUrl: `/src/assets/style-examples/${style.id}.png`, // 示例图片路径
+    imageUrl: `/style-examples/${style.id}.png`, // 示例图片路径（使用public目录）
     prompt: style.defaultPrompt.split('\n')[0] // 使用提示词的第一行作为示例
   }))
 })
