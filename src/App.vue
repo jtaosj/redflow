@@ -95,7 +95,7 @@ import Toast from './components/ui/Toast.vue'
 
 // 获取构建时间和版本号（如果已注入）
 const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : null
-const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.3.1'
+const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.3.2'
 
 // 格式化构建时间
 const formatBuildTime = (timeStr: string | null) => {

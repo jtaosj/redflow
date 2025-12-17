@@ -104,6 +104,8 @@
       :visible="showCompletionModal"
       :initial-project-name="store.topic || store.projectName || ''"
       :initial-project-description="store.projectDescription"
+      :completion-status="store.completionStatus"
+      :failed-count="store.getFailedPages().length"
       @confirm="handleCompletionConfirm"
       @cancel="handleCompletionCancel"
     />
@@ -151,29 +153,12 @@ const getStatusText = (status: string) => {
   return texts[status] || '等待中'
 }
 
-// 获取用户选择的风格（优先从store获取，其次从localStorage，确保风格一致性）
-const getSelectedStyle = (): string | undefined => {
-  // 优先使用 store 中保存的风格（在生成大纲时已设置）
-  if (store.style) {
-    return store.style
-  }
-  // 其次使用 localStorage 中保存的风格（从首页选择时保存）
-  const styleFromStorage = localStorage.getItem('TEXT_STYLE')
-  if (styleFromStorage) {
-    return styleFromStorage
-  }
-  return undefined
-}
-
 // 重试单张图片
 async function retrySingleImage(index: number) {
   const page = store.outline.pages.find(p => p.index === index)
   if (!page) return
 
   store.setImageRetrying(index)
-
-  // 获取用户选择的风格，确保风格一致性
-  const selectedStyle = getSelectedStyle()
 
   try {
     const result = await generatePageImage(
@@ -185,7 +170,9 @@ async function retrySingleImage(index: number) {
       page.type,
       undefined,
       (page as any).imagePrompt || undefined,
-      selectedStyle // 传递风格参数，确保风格一致性
+      store.style || undefined,
+      store.outline.visualGuide, // 传递全局视觉指南
+      page.visualMetadata // 传递当前页的视觉元数据
     )
     store.updateImage(index, result.imageUrl)
   } catch (e: any) {
@@ -203,6 +190,9 @@ const handleRegenerateAll = () => {
   if (!confirm('确定要重新生成全部图片吗？这将重新调用API并可能产生费用。')) {
     return
   }
+  
+  // 重置完成提示相关状态
+  showCompletionModal.value = false
   
   // 重置所有图片状态
   store.images.forEach(img => {
@@ -234,9 +224,6 @@ async function retryAllFailed() {
     store.setImageRetrying(page.index)
   })
 
-  // 获取用户选择的风格，确保所有重试的图片使用相同风格
-  const selectedStyle = getSelectedStyle()
-
   try {
     // 并发生成所有失败的图片
     await Promise.all(
@@ -251,7 +238,9 @@ async function retryAllFailed() {
             page.type,
             undefined,
             undefined,
-            selectedStyle // 传递风格参数，确保风格一致性
+            store.style || undefined,
+            store.outline.visualGuide, // 传递全局视觉指南
+            page.visualMetadata // 传递当前页的视觉元数据
           )
           store.updateImage(page.index, result.imageUrl)
         } catch (e: any) {
@@ -282,6 +271,9 @@ const startGenerationTask = async () => {
     return
   }
 
+  // 重置完成提示相关状态（确保重新生成时能正确显示完成提示）
+  showCompletionModal.value = false
+
   const taskStartTime = Date.now()
   const taskId = `task_${taskStartTime}_${Math.random().toString(36).substr(2, 9)}`
   console.log(`=== [${taskId}] 开始生成任务 ===`, {
@@ -295,16 +287,8 @@ const startGenerationTask = async () => {
 
   // 获取自定义prompt（从localStorage）
   const customImagePrompt = localStorage.getItem('CUSTOM_IMAGE_PROMPT') || undefined
-  // 获取用户选择的风格（优先从store获取，确保风格一致性）
-  const selectedStyle = getSelectedStyle()
-  
-  // 记录风格信息到日志，方便调试
-  console.log(`[${taskId}] 用户选择的风格:`, {
-    styleFromStore: store.style,
-    styleFromLocalStorage: localStorage.getItem('TEXT_STYLE'),
-    finalSelectedStyle: selectedStyle,
-    isHeadImageMode: store.headImageMode
-  })
+  // 获取风格选择（优先从store获取，否则从localStorage）
+  const selectedStyle = store.style || localStorage.getItem('TEXT_STYLE') || undefined
   
   try {
     // 确定需要生成的页面列表
@@ -318,7 +302,6 @@ const startGenerationTask = async () => {
     }
     
     // 并发生成所有需要生成的页面，提高整体速度
-    // 重要：所有页面都使用相同的风格参数，确保风格一致性
     const tasks = pagesToGenerate.map(async (page) => {
       // 再次检查：如果该页已经成功生成过，则完全跳过，避免重复计费
       const existingImage = store.images.find(img => img.index === page.index)
@@ -332,23 +315,26 @@ const startGenerationTask = async () => {
       
       try {
         console.log(`[${taskId}] 开始生成页面 ${page.index + 1} 的图片...`, { 
-          pageType: page.type,
-          style: selectedStyle, // 所有页面使用相同的风格
+          style: selectedStyle,
+          styleFromStore: store.style,
+          styleFromLocalStorage: localStorage.getItem('TEXT_STYLE'),
           isHeadImageMode: store.headImageMode
         })
-        const result = await generatePageImage(
-          page.content,
-          page.index,
-          store.outline.pages.length,
-          store.outline.raw,
-          store.topic,
-          page.type,
-          customImagePrompt || undefined,
-          (page as any).imagePrompt || undefined, // 传递用户编辑的配图建议
-          selectedStyle // 传递风格参数，确保所有页面风格一致
-        )
-        console.log(`[${taskId}] ✅ 页面 ${page.index + 1} 图片生成成功`)
-        store.updateProgress(page.index, 'done', result.imageUrl)
+    const result = await generatePageImage(
+      page.content,
+      page.index,
+      store.outline.pages.length,
+      store.outline.raw,
+      store.topic,
+      page.type,
+      customImagePrompt || undefined,
+      (page as any).imagePrompt || undefined, // 传递用户编辑的配图建议
+      selectedStyle,
+      store.outline.visualGuide, // 传递全局视觉指南
+      page.visualMetadata // 传递当前页的视觉元数据
+    )
+    console.log(`[${taskId}] ✅ 页面 ${page.index + 1} 图片生成成功`)
+    store.updateProgress(page.index, 'done', result.imageUrl)
       } catch (e: any) {
         console.error(`[${taskId}] ❌ 页面 ${page.index + 1} 图片生成失败:`, e)
         store.updateProgress(page.index, 'error', undefined, e.message || String(e))
@@ -365,74 +351,59 @@ const startGenerationTask = async () => {
   }
 }
 
-// 使用 watch 监听生成完成状态并保存历史记录
-// 添加防抖标记，避免重复执行
-let isSavingHistory = false
-let lastCheckTime = 0
-
-// 监听图片状态变化，当所有图片都生成完成时，保存历史记录并跳转
+// 监听完成状态，自动显示完成模态框
 watch(
-  () => store.images.map(img => img.status),
-  async (statuses) => {
-    // 防抖：至少间隔 1 秒才检查一次
-    const now = Date.now()
-    if (now - lastCheckTime < 1000) {
-      return
-    }
-    lastCheckTime = now
-
-    // 检查是否所有图片都已完成（done状态且有URL）
-    const allSucceeded = store.images.length > 0 && 
-                        store.images.length === store.outline.pages.length &&
-                        store.images.every(img => img.status === 'done' && img.url)
-    
-    // 检查是否正在生成中或已完成（避免在未开始生成时就触发，但允许在完成后触发）
-    // 放宽条件：只要所有图片都完成了，且进度状态是 generating 或 done，就允许触发
-    const isValidState = (store.progress.status === 'generating' || store.progress.status === 'done') && 
-                         store.progress.total > 0 // 确保已经开始了生成任务
-    
-    console.log('watch 触发检查:', {
-      allSucceeded,
-      isValidState,
-      imagesCount: store.images.length,
-      pagesCount: store.outline.pages.length,
-      statuses: statuses.join(','),
+  () => store.shouldShowCompletionModal,
+  (shouldShow, oldShouldShow) => {
+    console.log('🔍 [完成检测] shouldShowCompletionModal 变化:', {
+      shouldShow,
+      oldShouldShow,
+      showModal: showCompletionModal.value,
+      completionStatus: store.completionStatus,
+      isAllCompleted: store.isAllCompleted,
+      hasFailedImages: store.hasFailedImages,
       progressStatus: store.progress.status,
       progressTotal: store.progress.total,
-      hasRecordId: !!store.recordId,
-      isSavingHistory,
-      showModal: showCompletionModal.value
+      progressCurrent: store.progress.current,
+      imagesCount: store.images.length,
+      pagesToGenerate: store.getPagesToGenerate.length,
+      imagesStatus: store.images.map(img => ({ index: img.index, status: img.status, hasUrl: !!img.url }))
     })
     
-    // 如果所有图片都生成成功，且当前状态有效，且未在保存中，且还没有显示过完成提示
-    if (allSucceeded && isValidState && !isSavingHistory && !showCompletionModal.value) {
-      console.log('=== 检测到全部生成成功，显示完成提示模态框 ===')
-      isSavingHistory = true // 设置标记，防止重复执行
+    if (shouldShow && !showCompletionModal.value) {
+      console.log('=== ✅ 检测到应该显示完成提示模态框 ===', {
+        completionStatus: store.completionStatus,
+        isAllCompleted: store.isAllCompleted,
+        hasFailedImages: store.hasFailedImages,
+        progressStatus: store.progress.status
+      })
       
-      // 确保项目名称与当前主题一致（如果项目名称为空或与主题不匹配，使用主题）
-      if (!store.projectName || store.projectName !== store.topic) {
-        // 如果项目名称为空，或者与当前主题不一致，使用当前主题作为默认项目名称
-        // 但保留用户之前可能设置的项目名称（如果存在且不为空）
-        if (!store.projectName) {
-          store.setProjectName(store.topic)
-        }
+      // 确保项目名称已设置
+      if (!store.projectName) {
+        store.setProjectName(store.topic)
       }
       
-      // 标记生成完成（这会改变 progress.status 为 'done'）
-      const taskId = 'task_' + Date.now()
-      store.finishGeneration(taskId)
+      // 标记生成完成（如果还没有标记）
+      if (store.progress.status !== 'done') {
+        const taskId = 'task_' + Date.now()
+        store.finishGeneration(taskId)
+        console.log('📝 已调用 finishGeneration，taskId:', taskId)
+      }
       
-      // 显示完成提示模态框
+      // 显示模态框
       showCompletionModal.value = true
-      
-      // 延迟重置标记
-      setTimeout(() => {
-        isSavingHistory = false
-        console.log('isSavingHistory 标记已重置')
-      }, 2000)
+      console.log('✅ 完成提示模态框已显示，showCompletionModal.value =', showCompletionModal.value)
+    } else if (!shouldShow) {
+      console.log('⏸️ [完成检测] 不应该显示模态框，当前状态:', {
+        completionStatus: store.completionStatus,
+        progressStatus: store.progress.status,
+        progressTotal: store.progress.total
+      })
+    } else if (showCompletionModal.value) {
+      console.log('ℹ️ [完成检测] 模态框已经显示，跳过')
     }
   },
-  { deep: true, immediate: false } // 深度监听，不立即执行
+  { immediate: true }
 )
 
 // 处理完成提示模态框确认

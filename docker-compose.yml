@@ -1,4 +1,4 @@
-# 红流云创 v2.3.1 Docker部署配置
+# 红流云创 v2.2 Docker部署配置
 # 使用方式：
 # - Nginx部署: docker-compose -f docker-compose.nginx.yml up -d
 # - Node.js部署: docker-compose -f docker-compose.node.yml up -d
@@ -10,8 +10,8 @@ services:
       context: .
       dockerfile: Dockerfile.nginx
       args:
-        - VERSION=2.3.1
-    image: redflow-nginx:2.3.1
+        - VERSION=2.2.0
+    image: redflow-nginx:2.2
     container_name: redflow-nginx
     ports:
       - "${PORT:-8080}:80"

@@ -11,6 +11,7 @@ import { isMockMode, mockGenerateStyledImage, mockGeneratePageImage } from './mo
 import { STORAGE_KEYS, API_CONFIG } from '../../config/constants'
 import { useApi } from '../../composables/useApi'
 import { getStylePrompt } from '../../config/stylePrompts'
+import { VisualStyleGuide, Page } from '../../stores/textGenerator'
 import {
   getRecommendedColorPalette,
   getRecommendedLayoutStyle,
@@ -134,6 +135,7 @@ function calculateTemperature(style?: string, hasCustomPrompt?: boolean): number
   return 1.0
 }
 
+
 /**
  * 生成风格化图片（图生图模式）
  */
@@ -155,7 +157,7 @@ export async function generateStyledImage(
   let stylePrompt = getStylePrompt(style)
   if (!stylePrompt) {
     logger.warn(`风格 ${style} 不存在，使用默认提示词`)
-    stylePrompt = 'Professional product photography, clean background, good lighting, 3:4, 2048x2730, readable Chinese text, no watermarks or logos.'
+    stylePrompt = '专业产品摄影，干净背景，良好光线，清晰可读的中文文字，无水印、logo或标识。'
   }
 
   const { mimeType, data } = await fileToGenerativePart(originalFile)
@@ -193,7 +195,7 @@ ${stylePrompt}
    - 禁止添加或删除产品的任何部分或细节
    - 禁止添加水印、文字、logo或任何标记
 
-【格式要求】严格使用小红书3:4竖版格式，2K分辨率（2048x2730像素，aspect ratio 3:4），产品主体居中，顶部和底部留出文案空间。图片尺寸必须精确为2048x2730像素，确保中文文字清晰可读。
+【格式要求】严格使用小红书3:4竖版格式，超高清分辨率，产品主体居中，顶部和底部留出文案空间。确保中文文字清晰可读。注意：上述格式要求为技术规格说明，不应渲染为图片中的文字内容。
 
 ${additionalContext}`
   }
@@ -258,7 +260,9 @@ export async function generatePageImage(
   pageType: 'cover' | 'content' | 'summary' = 'content',
   customPrompt?: string,
   imagePrompt?: string,
-  style?: string
+  style?: string,
+  visualGuide?: VisualStyleGuide,
+  pageVisualMetadata?: Page['visualMetadata']
 ): Promise<{ imageUrl: string; usage: TokenUsage }> {
   if (isMockMode()) {
     logger.debug(`🧪 [模拟模式] 生成第 ${pageIndex + 1} 页图片`)
@@ -286,7 +290,7 @@ export async function generatePageImage(
     if (!stylePrompt || !stylePrompt.trim()) {
       // 如果风格不存在，使用默认提示词
       logger.warn(`风格 ${style} 不存在或为空，使用默认提示词`)
-      stylePrompt = 'Professional, clean, modern design, 3:4, 2048x2730, readable Chinese text, no watermarks or logos.'
+      stylePrompt = '专业、干净、现代设计，清晰可读的中文文字，无水印、logo或标识。'
     } else {
       logger.debug(`[风格提示词] 成功获取风格提示词，前100字符: ${stylePrompt.slice(0, 100)}`)
     }
@@ -329,28 +333,39 @@ export async function generatePageImage(
     }
   }
 
+  // 构建合规提醒（在所有分支中都需要）
+  const complianceNote = `【合规要求】
+- 禁止包含任何小红书的logo、用户ID或品牌标识
+- 禁止包含水印、logo或任何标记（尤其是右下角、左上角）
+- 如果参考图片中有水印或logo，必须完全去除\n\n`
+
   // 使用自定义 prompt 或默认内置模板
   let prompt = customPrompt || ''
+  
+  // 定义 styleSection 变量，确保在所有分支中都可访问
+  let styleSection = ''
   
   if (!prompt) {
     // 构建技术规格（所有情况都需要）
     // 头图模式下：提高生成质量要求，优化构图
     const technicalSpecs = isHeadImageMode 
       ? `【技术规格 - 必须严格遵守】
-- 竖版 3:4 比例（2048x2730像素，2K分辨率）
+- 竖版 3:4 比例，超高清2K分辨率
 - 超高清画质，8K级细节，确保中文文字清晰可读
 - 适合手机屏幕查看，特别优化小红书首图展示效果
 - 所有文字内容必须完整呈现，字号适中易读
 - 无水印、logo或品牌标识
 - 正确的竖屏观看排版，不能旋转或倒置
-- 构图饱满，视觉冲击力强，适合作为封面首图使用`
+- 构图饱满，视觉冲击力强，适合作为封面首图使用
+- 重要：上述技术规格为图片生成参数说明，禁止将这些参数数值（如分辨率、像素数等）渲染为图片中的文字内容`
       : `【技术规格 - 必须严格遵守】
-- 竖版 3:4 比例（2048x2730像素，2K分辨率）
+- 竖版 3:4 比例，超高清2K分辨率
 - 超高清画质，确保中文文字清晰可读
 - 适合手机屏幕查看
 - 所有文字内容必须完整呈现
 - 无水印、logo或品牌标识
-- 正确的竖屏观看排版，不能旋转或倒置`
+- 正确的竖屏观看排版，不能旋转或倒置
+- 重要：上述技术规格为图片生成参数说明，禁止将这些参数数值（如分辨率、像素数等）渲染为图片中的文字内容`
 
     // 构建页面设计要求（根据页面类型）
     const pageDesignRequirements = isHeadImageMode 
@@ -375,13 +390,13 @@ export async function generatePageImage(
 - 重点内容用颜色或粗体强调
 - 可以有小图标辅助说明`)
 
-    // 构建风格一致性要求
+    // 构建风格一致性要求（非封面页需要参考封面）
     // 如果提供了风格参数，所有页面都应该使用相同的用户选择风格
     let styleConsistencyNote = ''
     if (style && stylePrompt) {
       // 有用户选择的风格时，强调所有页面必须使用相同的风格
       if (pageType === 'cover') {
-        styleConsistencyNote = `【风格一致性要求】这是封面页，后续所有内容页必须严格遵循本页的风格设定（${style}），保持整体风格统一。\n\n`
+        styleConsistencyNote = `【风格一致性要求】这是封面页，后续所有内容页必须严格遵守本页的风格设定（${style}），保持整体风格统一。\n\n`
       } else {
         styleConsistencyNote = `【风格一致性要求】必须与封面页使用完全相同的风格（${style}），确保所有页面风格统一。配色、布局、视觉元素都应保持一致。\n\n`
       }
@@ -405,16 +420,74 @@ export async function generatePageImage(
 - 排版美观，留白合理，支持 emoji 和符号\n\n`
     }
 
-    // 构建合规提醒
-    const complianceNote = `【合规要求】
-- 禁止包含任何小红书的logo、用户ID或品牌标识
-- 禁止包含水印、logo或任何标记（尤其是右下角、左上角）
-- 如果参考图片中有水印或logo，必须完全去除\n\n`
+    // 按优先级组织 prompt：全局视觉指南 > 当前页视觉约束 > 风格要求 > 用户配图建议 > 技术规格 > 内容 > 设计要求
+    
+    // 构建全局视觉指南部分（最高优先级）
+    const globalVisualGuide = visualGuide 
+      ? `【全局视觉指南 - 所有页面必须严格遵守】
+主色调：${visualGuide.colorPalette.primary}
+辅助色调：${visualGuide.colorPalette.secondary.join('、')}
+字体风格：${visualGuide.typographyStyle}
+布局风格：${visualGuide.layoutStyle}
+装饰元素：${visualGuide.decorativeElements}
+整体美学：${visualGuide.overallAesthetic}
 
-    // 按优先级组织 prompt：风格要求 > 用户配图建议 > 技术规格 > 内容 > 设计要求
+【配色统一性要求 - 必须严格遵守】
+- 所有内容页必须使用上述主色调，不允许任何变体
+- 总结页必须使用与内容页完全相同的主色调
+- 封面页可以使用上述主色调或兼容配色（建议使用上述主色调）
+- 违反此要求将导致帖子整体性被破坏
+
+`
+      : ''
+    
+    // 构建当前页视觉约束
+    let pageVisualConstraint = ''
+    if (pageVisualMetadata || visualGuide) {
+      const constraintLines: string[] = []
+      
+      // 关键优化：内容页和总结页必须使用全局主色调，不允许变体
+      let primaryColor: string | undefined
+      if (pageType === 'content' || pageType === 'summary') {
+        // 内容页和总结页：强制使用全局主色调
+        primaryColor = visualGuide?.colorPalette.primary
+        if (primaryColor) {
+          constraintLines.push(`主色调：${primaryColor}（全局统一主色调，必须严格遵守）`)
+        }
+      } else {
+        // 封面页：可以使用页面元数据中的主色调，或回退到全局主色调
+        primaryColor = pageVisualMetadata?.primaryColor || visualGuide?.colorPalette.primary
+        if (primaryColor) {
+          constraintLines.push(`主色调：${primaryColor}${pageVisualMetadata?.primaryColor ? '' : '（遵循全局主色调）'}`)
+        }
+      }
+      
+      const visualFocus = pageVisualMetadata?.visualFocus || (visualGuide ? `遵循全局布局风格（${visualGuide.layoutStyle}）` : undefined)
+      if (visualFocus) {
+        constraintLines.push(`视觉重点：${visualFocus}`)
+      }
+      
+      const layoutPattern = pageVisualMetadata?.layoutPattern || (visualGuide ? `遵循全局布局风格（${visualGuide.layoutStyle}）` : undefined)
+      if (layoutPattern) {
+        constraintLines.push(`布局模式：${layoutPattern}`)
+      }
+      
+      const decorativeStyle = pageVisualMetadata?.decorativeStyle || visualGuide?.decorativeElements
+      if (decorativeStyle) {
+        constraintLines.push(`装饰风格：${decorativeStyle}`)
+      }
+      
+      if (constraintLines.length > 0) {
+        pageVisualConstraint = `【当前页视觉约束】
+${constraintLines.join('\n')}
+
+`
+      }
+    }
+    
     // 构建风格要求部分（如果有风格提示词）
-    const styleSection = (stylePrompt && stylePrompt.trim()) 
-      ? `【风格要求 - 最高优先级，必须严格遵守】
+    styleSection = (stylePrompt && stylePrompt.trim()) 
+      ? `【风格要求 - 必须严格遵守】
 ${stylePrompt.trim()}${aestheticParams}
 
 ` 
@@ -430,9 +503,73 @@ ${stylePrompt.trim()}${aestheticParams}
       }
     }
     
-    prompt = `${complianceNote}${styleSection}${userImageSuggestion}${technicalSpecs}\n\n【页面内容】\n${safePageContent}\n\n【页面类型】${isHeadImageMode ? '头图页' : (pageType === 'cover' ? '封面页' : pageType === 'summary' ? '总结页' : '内容页')}\n\n${styleConsistencyNote}${genericDesignGuidance}${pageDesignRequirements}\n\n【上下文参考】\n用户原始需求：${topic}\n完整内容大纲：\n---\n${fullOutline}\n---`
+    prompt = `${complianceNote}${globalVisualGuide}${pageVisualConstraint}${styleSection}${userImageSuggestion}${technicalSpecs}\n\n【页面内容】\n${safePageContent}\n\n【页面类型】${isHeadImageMode ? '头图页' : (pageType === 'cover' ? '封面页' : pageType === 'summary' ? '总结页' : '内容页')}\n\n${styleConsistencyNote}${genericDesignGuidance}${pageDesignRequirements}\n\n【上下文参考】\n用户原始需求：${topic}\n完整内容大纲：\n---\n${fullOutline}\n---`
   } else {
     // 使用自定义 prompt，但需要确保风格提示词被正确注入
+    
+    // 构建全局视觉指南部分（如果存在）
+    const globalVisualGuideForCustom = visualGuide 
+      ? `【全局视觉指南 - 所有页面必须严格遵守】
+主色调：${visualGuide.colorPalette.primary}
+辅助色调：${visualGuide.colorPalette.secondary.join('、')}
+字体风格：${visualGuide.typographyStyle}
+布局风格：${visualGuide.layoutStyle}
+装饰元素：${visualGuide.decorativeElements}
+整体美学：${visualGuide.overallAesthetic}
+
+【配色统一性要求 - 必须严格遵守】
+- 所有内容页必须使用上述主色调，不允许任何变体
+- 总结页必须使用与内容页完全相同的主色调
+- 封面页可以使用上述主色调或兼容配色（建议使用上述主色调）
+- 违反此要求将导致帖子整体性被破坏
+
+`
+      : ''
+    
+    // 构建当前页视觉约束（如果存在）
+    let pageVisualConstraintForCustom = ''
+    if (pageVisualMetadata || visualGuide) {
+      const constraintLines: string[] = []
+      
+      // 关键优化：内容页和总结页必须使用全局主色调，不允许变体
+      let primaryColor: string | undefined
+      if (pageType === 'content' || pageType === 'summary') {
+        // 内容页和总结页：强制使用全局主色调
+        primaryColor = visualGuide?.colorPalette.primary
+        if (primaryColor) {
+          constraintLines.push(`主色调：${primaryColor}（全局统一主色调，必须严格遵守）`)
+        }
+      } else {
+        // 封面页：可以使用页面元数据中的主色调，或回退到全局主色调
+        primaryColor = pageVisualMetadata?.primaryColor || visualGuide?.colorPalette.primary
+        if (primaryColor) {
+          constraintLines.push(`主色调：${primaryColor}${pageVisualMetadata?.primaryColor ? '' : '（遵循全局主色调）'}`)
+        }
+      }
+      
+      const visualFocus = pageVisualMetadata?.visualFocus || (visualGuide ? `遵循全局布局风格（${visualGuide.layoutStyle}）` : undefined)
+      if (visualFocus) {
+        constraintLines.push(`视觉重点：${visualFocus}`)
+      }
+      
+      const layoutPattern = pageVisualMetadata?.layoutPattern || (visualGuide ? `遵循全局布局风格（${visualGuide.layoutStyle}）` : undefined)
+      if (layoutPattern) {
+        constraintLines.push(`布局模式：${layoutPattern}`)
+      }
+      
+      const decorativeStyle = pageVisualMetadata?.decorativeStyle || visualGuide?.decorativeElements
+      if (decorativeStyle) {
+        constraintLines.push(`装饰风格：${decorativeStyle}`)
+      }
+      
+      if (constraintLines.length > 0) {
+        pageVisualConstraintForCustom = `【当前页视觉约束】
+${constraintLines.join('\n')}
+
+`
+      }
+    }
+    
     // 替换自定义prompt中的变量
     prompt = (customPrompt || '')
       .replace(/\{\{page_content\}\}/g, pageContent)
@@ -443,12 +580,50 @@ ${stylePrompt.trim()}${aestheticParams}
       .replace(/\{\{full_outline\}\}/g, fullOutline)
       .replace(/\{\{style_prompt\}\}/g, stylePrompt || '')
       .replace(/\{\{image_prompt\}\}/g, imagePrompt || '')
+      .replace(/\{\{title_color\}\}/g, '')
     
-    // 如果自定义 prompt 中没有包含风格要求，且提供了风格提示词，则在开头添加
+    // 如果提供了全局视觉指南，且自定义 prompt 中没有包含，则在开头添加
+    if (globalVisualGuideForCustom && !prompt.includes('全局视觉指南')) {
+      prompt = globalVisualGuideForCustom + prompt
+      logger.debug(`[自定义Prompt] 检测到全局视觉指南，已添加到开头`)
+    }
+    
+    // 如果提供了当前页视觉约束，且自定义 prompt 中没有包含，则在全局视觉指南后添加
+    if (pageVisualConstraintForCustom && !prompt.includes('当前页视觉约束')) {
+      // 找到全局视觉指南的位置，在其后插入
+      const guideIndex = prompt.indexOf('全局视觉指南')
+      if (guideIndex !== -1) {
+        // 找到全局视觉指南的结束位置（下一个空行或下一个章节）
+        const nextSectionMatch = prompt.substring(guideIndex).match(/\n\n/)
+        if (nextSectionMatch) {
+          const insertIndex = guideIndex + nextSectionMatch.index! + 2
+          prompt = prompt.slice(0, insertIndex) + pageVisualConstraintForCustom + prompt.slice(insertIndex)
+        } else {
+          prompt = prompt + '\n' + pageVisualConstraintForCustom
+        }
+      } else {
+        prompt = pageVisualConstraintForCustom + prompt
+      }
+      logger.debug(`[自定义Prompt] 检测到当前页视觉约束，已添加`)
+    }
+    
+    // 如果自定义 prompt 中没有包含风格要求，且提供了风格提示词，则在视觉约束后添加
     if (stylePrompt && stylePrompt.trim() && !prompt.includes('风格要求') && !prompt.includes('style')) {
-      const styleSection = `【风格要求 - 最高优先级，必须严格遵守】\n${stylePrompt.trim()}\n\n`
-      prompt = styleSection + prompt
-      logger.debug(`[自定义Prompt] 检测到风格提示词但自定义prompt中未包含，已添加到开头`)
+      styleSection = `【风格要求 - 必须严格遵守】\n${stylePrompt.trim()}${aestheticParams}\n\n`
+      // 在视觉约束后添加，如果没有视觉约束则在开头添加
+      const constraintIndex = prompt.indexOf('当前页视觉约束')
+      if (constraintIndex !== -1) {
+        const nextSectionMatch = prompt.substring(constraintIndex).match(/\n\n/)
+        if (nextSectionMatch) {
+          const insertIndex = constraintIndex + nextSectionMatch.index! + 2
+          prompt = prompt.slice(0, insertIndex) + styleSection + prompt.slice(insertIndex)
+        } else {
+          prompt = prompt + '\n' + styleSection
+        }
+      } else {
+        prompt = styleSection + prompt
+      }
+      logger.debug(`[自定义Prompt] 检测到风格提示词但自定义prompt中未包含，已添加`)
     }
     
     // 如果自定义 prompt 中没有包含用户配图建议，在开头添加
@@ -484,6 +659,13 @@ ${stylePrompt.trim()}${aestheticParams}
     negativePrompt = `${negativePrompt}, ${headImageNegative.join(', ')}`
   }
   const finalPrompt = `${prompt}\n\n【禁止元素】${negativePrompt}`
+  
+  // 调试日志：输出完整的提示词（仅前500字符，避免日志过长）
+  logger.debug(`[Prompt构建完成] 风格: ${style || '无'}, 页面类型: ${pageType}, 提示词长度: ${prompt.length}`, {
+    styleSection: styleSection ? styleSection.slice(0, 200) : '无',
+    promptPreview: prompt.slice(0, 500),
+    negativePromptPreview: negativePrompt.slice(0, 200)
+  })
   
   // 计算动态温度
   // 头图模式下：降低温度，提高一致性和质量

@@ -236,3 +236,28 @@ export const getUserHistory = (userId: string): GeneratedResult[] => {
   }
 }
 
+/**
+ * 删除历史记录
+ */
+export const deleteHistoryItem = (userId: string, itemId: string): boolean => {
+  try {
+    const key = `${HISTORY_KEY_PREFIX}${userId}`
+    const historyStr = localStorage.getItem(key)
+    if (!historyStr) return false
+    
+    const history: GeneratedResult[] = JSON.parse(historyStr)
+    const filtered = history.filter(item => item.id !== itemId)
+    
+    if (filtered.length === history.length) {
+      return false // 没有找到要删除的项
+    }
+    
+    localStorage.setItem(key, JSON.stringify(filtered))
+    console.log('历史记录已删除:', itemId)
+    return true
+  } catch (e) {
+    console.error('删除历史记录失败:', e)
+    return false
+  }
+}
+

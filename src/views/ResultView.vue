@@ -342,26 +342,41 @@ const saveHistoryToResultView = async (userId: string) => {
     }
     
     console.log('=== ResultView: 保存历史记录 ===', historyItem)
-    await saveHistoryItem(userId, historyItem as any)
-    console.log('=== ResultView: 历史记录保存完成 ===')
-    
-    // 更新store中的recordId
-    store.recordId = recordId
-    
-    // 验证保存
-    const { getUserHistory } = await import('../services/storage')
-    const savedHistory = getUserHistory(userId)
-    console.log('验证：当前用户的历史记录数量:', savedHistory.length)
-    if (savedHistory.length > 0) {
-      const latestRecord = savedHistory.find(h => h.id === recordId)
-      if (latestRecord) {
-        console.log('✅ 历史记录验证成功！记录ID:', recordId)
-      } else {
-        console.warn('⚠️ 历史记录验证：未找到对应记录，但保存操作已完成')
+    try {
+      await saveHistoryItem(userId, historyItem as any)
+      console.log('=== ResultView: 历史记录保存完成 ===')
+      
+      // 更新store中的recordId
+      store.recordId = recordId
+      
+      // 验证保存
+      const { getUserHistory } = await import('../services/storage')
+      const savedHistory = getUserHistory(userId)
+      console.log('验证：当前用户的历史记录数量:', savedHistory.length)
+      if (savedHistory.length > 0) {
+        const latestRecord = savedHistory.find(h => h.id === recordId)
+        if (latestRecord) {
+          console.log('✅ 历史记录验证成功！记录ID:', recordId)
+        } else {
+          console.warn('⚠️ 历史记录验证：未找到对应记录，但保存操作已完成')
+        }
       }
+    } catch (saveError: any) {
+      console.error('❌ ResultView: 保存历史记录时出错:', saveError)
+      // 显示用户友好的错误提示
+      const errorMessage = saveError?.message || '保存失败，请重试'
+      if (errorMessage.includes('存储空间不足')) {
+        alert('⚠️ 存储空间不足，无法保存历史记录。\n\n建议：\n1. 清理浏览器缓存\n2. 删除一些旧的历史记录\n3. 减少图片数量后重试')
+      } else {
+        alert(`保存失败：${errorMessage}\n\n请检查控制台获取详细信息。`)
+      }
+      throw saveError // 重新抛出错误，让调用者知道保存失败
     }
-  } catch (error) {
-    console.error('❌ ResultView: 保存历史记录时出错:', error)
+  } catch (error: any) {
+    console.error('❌ ResultView: saveHistoryToResultView 外层错误:', error)
+    // 如果内层已经处理了错误，这里只是记录日志
+    // 如果内层没有处理，这里可以添加额外的错误处理
+    throw error
   }
 }
 
@@ -524,20 +539,6 @@ const downloadAllImages = () => {
 }
 
 
-// 获取用户选择的风格（优先从store获取，确保风格一致性）
-const getSelectedStyle = (): string | undefined => {
-  // 优先使用 store 中保存的风格（在生成大纲时已设置）
-  if (store.style) {
-    return store.style
-  }
-  // 其次使用 localStorage 中保存的风格（从首页选择时保存）
-  const styleFromStorage = localStorage.getItem('TEXT_STYLE')
-  if (styleFromStorage) {
-    return styleFromStorage
-  }
-  return undefined
-}
-
 const handleRegenerate = async (image: any) => {
   if (regeneratingIndex.value !== null) return
 
@@ -551,10 +552,6 @@ const handleRegenerate = async (image: any) => {
 
     // 获取自定义prompt
     const customImagePrompt = localStorage.getItem('CUSTOM_IMAGE_PROMPT') || undefined
-    // 获取用户选择的风格，确保重绘时使用相同风格
-    const selectedStyle = getSelectedStyle()
-    
-    console.log('重绘图片，使用风格:', selectedStyle)
     
     const result = await generatePageImage(
       page.content,
@@ -565,7 +562,9 @@ const handleRegenerate = async (image: any) => {
       page.type,
       customImagePrompt || undefined,
       (page as any).imagePrompt || undefined,
-      selectedStyle // 传递风格参数，确保风格一致性
+      store.style || undefined,
+      store.outline.visualGuide, // 传递全局视觉指南
+      page.visualMetadata // 传递当前页的视觉元数据
     )
     store.updateImage(image.index, result.imageUrl)
   } catch (e: any) {

@@ -25,10 +25,20 @@ export async function saveHistoryItem(
     let storedGeneratedImage = result.generatedImageUrl
 
     // 对所有模式的图片进行压缩，以节省存储空间
+    // 统一的压缩参数：宽度600px，质量0.6
+    const COMPRESSION_WIDTH = 600
+    const COMPRESSION_QUALITY = 0.6
+    
     if (result.mode === ProcessingMode.IMAGE_TO_IMAGE) {
+      // 图生图模式：压缩原始图片和生成的图片
       if (result.originalImageFile || result.originalImageUrl) {
         try {
-          storedOriginalImage = await compressImage(result.originalImageFile || result.originalImageUrl)
+          storedOriginalImage = await compressImage(
+            result.originalImageFile || result.originalImageUrl,
+            COMPRESSION_WIDTH,
+            COMPRESSION_QUALITY
+          )
+          logger.debug('原始图片压缩完成')
         } catch (e) {
           logger.warn('Original image compression failed', e)
         }
@@ -36,18 +46,30 @@ export async function saveHistoryItem(
 
       if (result.generatedImageUrl) {
         try {
-          storedGeneratedImage = await compressImage(result.generatedImageUrl)
+          storedGeneratedImage = await compressImage(
+            result.generatedImageUrl,
+            COMPRESSION_WIDTH,
+            COMPRESSION_QUALITY
+          )
+          logger.debug('生成图片压缩完成')
         } catch (e) {
           logger.warn('Generated image compression failed', e)
         }
       }
     } else if (result.mode === ProcessingMode.TEXT_TO_IMAGE && result.pages) {
-      // TEXT_TO_IMAGE 模式下，压缩所有页面图片以节省存储空间
+      // 文生图模式：压缩所有页面图片以节省存储空间
+      logger.debug(`开始压缩 ${result.pages.length} 页图片`)
       const compressedPages = await Promise.all(
         result.pages.map(async (page) => {
-          if (page.imageUrl && page.imageUrl.startsWith('data:')) {
+          if (page.imageUrl) {
+            // 压缩所有格式的图片（包括 data: 和其他格式）
             try {
-              const compressed = await compressImage(page.imageUrl, 600, 0.6) // 更激进的压缩
+              const compressed = await compressImage(
+                page.imageUrl,
+                COMPRESSION_WIDTH,
+                COMPRESSION_QUALITY
+              )
+              logger.debug(`页面 ${page.index} 图片压缩完成`)
               return { ...page, imageUrl: compressed }
             } catch (e) {
               logger.warn(`Page ${page.index} image compression failed`, e)
@@ -58,14 +80,47 @@ export async function saveHistoryItem(
         })
       )
       result.pages = compressedPages
+      logger.debug('所有页面图片压缩完成')
     } else if (result.mode === ProcessingMode.PROMPT_TO_IMAGE) {
-      // PROMPT_TO_IMAGE 模式下，压缩生成的图片
-      if (result.generatedImageUrl && result.generatedImageUrl.startsWith('data:')) {
+      // 提示词生图模式：压缩生成的图片
+      if (result.generatedImageUrl) {
         try {
-          storedGeneratedImage = await compressImage(result.generatedImageUrl, 600, 0.6)
+          storedGeneratedImage = await compressImage(
+            result.generatedImageUrl,
+            COMPRESSION_WIDTH,
+            COMPRESSION_QUALITY
+          )
+          logger.debug('提示词生成图片压缩完成')
         } catch (e) {
           logger.warn('PROMPT_TO_IMAGE image compression failed', e)
         }
+      }
+    }
+    
+    // 额外压缩：如果 originalImageUrl 或 generatedImageUrl 存在但未被压缩，也进行压缩
+    if (result.originalImageUrl && result.originalImageUrl.startsWith('data:')) {
+      try {
+        storedOriginalImage = await compressImage(
+          result.originalImageUrl,
+          COMPRESSION_WIDTH,
+          COMPRESSION_QUALITY
+        )
+        logger.debug('额外压缩 originalImageUrl 完成')
+      } catch (e) {
+        logger.warn('Additional originalImageUrl compression failed', e)
+      }
+    }
+    
+    if (result.generatedImageUrl && result.generatedImageUrl.startsWith('data:') && !storedGeneratedImage) {
+      try {
+        storedGeneratedImage = await compressImage(
+          result.generatedImageUrl,
+          COMPRESSION_WIDTH,
+          COMPRESSION_QUALITY
+        )
+        logger.debug('额外压缩 generatedImageUrl 完成')
+      } catch (e) {
+        logger.warn('Additional generatedImageUrl compression failed', e)
       }
     }
 

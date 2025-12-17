@@ -20,473 +20,418 @@ export const DEFAULT_STYLE_PROMPTS: Record<string, Omit<StylePromptConfig, 'cust
   xiaohongshu: {
     id: 'xiaohongshu',
     name: '小红书爆款风格',
-    description: '一眼像刷到爆款封面，随手一发就想上热门的那种。',
-    defaultPrompt: `A XiaoHongShu viral-style vertical poster, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Clean modern layout with dynamic color palette
-- Strong visual hierarchy with large title and subtitle
-- Readable Chinese text with proper typography
-- Natural lighting with subtle gradients
-- Minimal decorative icons and elements
-- Professional and trendy aesthetic suitable for young audience
-- Paper texture with subtle noise for authentic feel
+    description: '小红书爆款图文风格，清新、精致、有设计感',
+    defaultPrompt: `【整体风格要求】
+- 干净现代的布局，动态的配色方案
+- 强烈的视觉层次，大标题和副标题
+- 清晰可读的中文文字，合适的排版
+- 自然光线，带有微妙的渐变
+- 极简的装饰性图标和元素
+- 专业且时尚的美学，适合年轻受众
+- 纸质纹理，带有微妙噪点，呈现真实质感
 
 【视觉元素】
-- Background: Simple but not monotonous, can have subtle patterns or gradients
-- Typography: Clear hierarchy, important information highlighted
-- Color scheme: Harmonious tones matching content theme, visually appealing
-- Layout: Grid-based structure with generous white space, balanced composition
-- Decorative elements: Subtle icons or illustrations to support content
-
-【技术规格】
-- Vertical 3:4 aspect ratio (小红书标准)
-- 2K resolution (2048x2730 pixels), ultra-high definition
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：简洁但不单调，可以有微妙的图案或渐变
+- 排版：清晰的层次，重要信息突出显示
+- 配色方案：和谐的色调，与内容主题匹配，视觉吸引力强
+- 布局：基于网格的结构，留白充足，平衡的构图
+- 装饰元素：微妙的图标或插画，支持内容呈现
 
 【文字排版】
-- Layout split: Top 30% for Title Area, Bottom 70% for Content Grid
-- Title text: Clear, bold, large font size, strictly legible
-- Subtitle text: Medium weight, positioned below title
-- Body content: Listed clearly with custom bullet points
-- Text clear and readable, appropriate font size
-- Important information prominently displayed
-- Beautiful typography with reasonable white space
-- Support for emoji and symbols
-- If cover page, title should be large and eye-catching
+- 布局划分：顶部30%用于标题区域，底部70%用于内容网格
+- 标题文字：清晰、粗体、大字号，清晰可读
+- 副标题文字：中等粗细，位于标题下方
+- 正文内容：清晰列出，使用自定义项目符号
+- 文字清晰可读，字号适中
+- 重要信息突出显示
+- 美观的排版，合理的留白
+- 支持emoji和符号
+- 如果是封面页，标题应该大且醒目
 
 【风格一致性】
-- Maintain consistent color scheme and design style throughout
-- Visual elements should be unified
-- Layout style should be consistent across all pages`
+- 保持一致的配色方案和设计风格
+- 视觉元素应该统一
+- 布局风格在所有页面中保持一致
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   poster_2k: {
     id: 'poster_2k',
     name: '海报风格（2K）',
-    description: '自带电影感的竖版海报，让你的内容看起来像在宣传大片。',
-    defaultPrompt: `A 3D diorama movie-poster style, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Bold cinematic composition with dramatic lighting
-- Clear focal point with strong visual impact
-- Chinese headline and subheadline at the top
-- Space for short synopsis at the bottom
-- Rich textures and high contrast
-- Isometric view of 3D miniature scene on square base
-- Film grain for cinematic feel
+    description: '3D微缩场景电影海报风格，适合电影、剧集等主题',
+    defaultPrompt: `【整体风格要求】
+- 大胆的电影式构图，戏剧性的光线
+- 清晰的焦点，强烈的视觉冲击
+- 顶部中文标题和副标题
+- 底部留出简短简介的空间
+- 丰富的纹理和高对比度
+- 方形底座上的3D微缩场景等距视图
+- 胶片颗粒感，呈现电影质感
 
 【视觉元素】
-- 3D rendered isometric diorama with miniature style
-- Iconic scene selection with maximum dramatic tension
-- Miniature figures with rich details and dynamic poses
-- Environment details overflowing the base (dust, smoke, light effects)
-- Dramatic localized lighting (car lights, fire, sunset)
-- Clean, blurred background coordinated with main subject tones
-
-【技术规格】
-- Vertical 3:4 aspect ratio (2048x2730 pixels, 2K resolution)
-- Ultra-high definition quality
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers (except specified watermarks)
-- Correct vertical orientation, no rotation or inversion
+- 3D渲染的等距微缩场景风格
+- 选择标志性场景，最大戏剧张力
+- 微缩人物，丰富的细节和动态姿势
+- 环境细节溢出底座（灰尘、烟雾、光影效果）
+- 戏剧性的局部光线（车灯、火焰、夕阳）
+- 干净、模糊的背景，与主体色调协调
 
 【文字排版】
-- Large title at the top occupying main position
-- Subtitle centered or below the title
-- Director/release date information
-- Two-sentence synopsis at the bottom
-- Professional typography with strong visual hierarchy
+- 顶部大标题占据主要位置
+- 副标题居中或位于标题下方
+- 导演/上映日期信息
+- 底部两句话的简介
+- 专业的排版，强烈的视觉层次
 
 【风格一致性】
-- Maintain consistent cinematic style throughout
-- Unified color scheme and lighting effects
-- Consistent visual elements and composition style`
+- 保持一致的电影风格
+- 统一的配色方案和光线效果
+- 一致的视觉元素和构图风格
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   ins_minimal: {
     id: 'ins_minimal',
     name: 'INS 极简',
-    description: '留白很多、东西不多，但每一笔都刚刚好，很「高级的小清爽」。',
-    defaultPrompt: `Minimalist INS aesthetic, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Clean white or neutral background
-- Soft natural lighting with gentle shadows
-- Plenty of white space for breathing room
-- Refined typography for Chinese text
-- Product-centered or content-focused composition
-- High-end editorial look with Instagram aesthetic
-- Subtle paper texture for authentic feel
+    description: '极简主义Instagram风格，干净简洁',
+    defaultPrompt: `【整体风格要求】
+- 干净的白色或中性背景
+- 柔和的自然光线，温和的阴影
+- 充足的留白空间
+- 精致的中文文字排版
+- 产品居中或内容聚焦的构图
+- 高端的编辑风格，具有Instagram美学
+- 微妙的纸质纹理，呈现真实质感
 
 【视觉元素】
-- Background: Pure white, light gray, or neutral tones
-- Lighting: Soft natural light, avoiding harsh shadows
-- Composition: Centered or rule-of-thirds layout with grid structure
-- Minimal decorative elements, focus on content
-- Subtle textures or gradients if needed
-- Clean and airy feeling
-
-【技术规格】
-- Vertical 3:4 aspect ratio (2048x2730 pixels, 2K resolution)
-- Ultra-high definition quality
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：纯白、浅灰或中性色调
+- 光线：柔和自然光，避免强烈阴影
+- 构图：居中或三分法布局，网格结构
+- 极简的装饰元素，聚焦内容
+- 如需可添加微妙的纹理或渐变
+- 干净通透的感觉
 
 【文字排版】
-- Minimalist typography with clear hierarchy
-- Layout split: Top 25% for Title, Bottom 75% for Content
-- Generous spacing between elements
-- Elegant font choices
-- Subtle color accents if needed
-- Focus on readability and simplicity
+- 极简的排版，清晰的层次
+- 布局划分：顶部25%用于标题，底部75%用于内容
+- 元素间充足的间距
+- 优雅的字体选择
+- 如需要可添加微妙的色彩强调
+- 聚焦可读性和简洁性
 
 【风格一致性】
-- Maintain consistent minimalist aesthetic
-- Unified color palette (neutral tones)
-- Consistent spacing and layout principles
-- Clean visual elements throughout`
+- 保持一致的极简美学
+- 统一的配色方案（中性色调）
+- 一致的间距和布局原则
+- 干净的视觉元素贯穿始终
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   tech_future: {
     id: 'tech_future',
     name: '科技未来',
-    description: '冷色霓虹 + 科技线条，适合一切「看起来要很厉害」的内容。',
-    defaultPrompt: `Futuristic tech style, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Cool color tones with neon accents
-- Sleek gradients and smooth transitions
-- HUD/glow elements for tech feel
-- Crisp edges and sharp details
-- Chinese text blocks with clear hierarchy
-- High-resolution sharpness with modern aesthetic
-- Subtle digital noise for authentic tech feel
+    description: '未来科技风格，现代感强',
+    defaultPrompt: `【整体风格要求】
+- 冷色调，带有霓虹光强调
+- 流畅的渐变和平滑的过渡
+- HUD/发光元素，呈现科技感
+- 清晰的边缘和锐利的细节
+- 中文文字块，清晰的层次
+- 高分辨率锐度，现代美学
+- 微妙的数字噪点，呈现真实科技感
 
 【视觉元素】
-- Background: Dark or cool-toned with tech patterns
-- Lighting: Neon glows, LED effects, digital light
-- Composition: Dynamic tech-inspired layouts with grid structure
-- Elements: Geometric shapes, circuit patterns, holographic effects
-- Color scheme: Blues, purples, cyans, with neon highlights
-- Futuristic and innovative feeling
-
-【技术规格】
-- Vertical 3:4 aspect ratio (2048x2730 pixels, 2K resolution)
-- Ultra-high definition quality
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：深色或冷色调，带有科技图案
+- 光线：霓虹光晕、LED效果、数字光
+- 构图：动态的科技风格布局，网格结构
+- 元素：几何形状、电路图案、全息效果
+- 配色方案：蓝色、紫色、青色，带有霓虹高光
+- 未来感和创新感
 
 【文字排版】
-- Modern tech-inspired typography
-- Layout split: Top 30% for Title, Middle 50% for Content, Bottom 20% for Details
-- Clear information hierarchy
-- Neon or glowing text effects if appropriate
-- Digital-style font choices
-- Strong contrast for readability
+- 现代科技风格的排版
+- 布局划分：顶部30%用于标题，中间50%用于内容，底部20%用于细节
+- 清晰的信息层次
+- 如适当可添加霓虹或发光文字效果
+- 数字风格的字体选择
+- 强烈的对比度，确保可读性
 
 【风格一致性】
-- Maintain consistent futuristic aesthetic
-- Unified cool color palette
-- Consistent tech elements and effects
-- Modern visual language throughout`
+- 保持一致的未来主义美学
+- 统一的冷色调配色
+- 一致的科技元素和效果
+- 现代视觉语言贯穿始终
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   nature_fresh: {
     id: 'nature_fresh',
     name: '自然清新',
-    description: '像把绿植搬进了图片里，看着就很会呼吸的那种清爽感。',
-    defaultPrompt: `Fresh nature style, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Soft daylight with natural lighting
-- Greenery elements and natural textures
-- Airy composition with open feeling
-- Color palette matching natural theme
-- Gentle depth of field
-- Chinese text readable and balanced
-- Fresh and clean feeling
-- Natural film grain for authentic look
+    description: '自然清新风格，绿色环保',
+    defaultPrompt: `【整体风格要求】
+- 柔和的日光，自然光线
+- 绿色元素和自然纹理
+- 通透的构图，开放的感觉
+- 配色方案匹配自然主题
+- 柔和的景深
+- 中文文字清晰可读且平衡
+- 清新干净的感觉
+- 自然胶片颗粒，呈现真实质感
 
 【视觉元素】
-- Background: Natural scenes, greenery, or organic textures
-- Lighting: Soft daylight, natural shadows
-- Composition: Open and airy, breathing space with grid structure
-- Elements: Plants, leaves, natural materials
-- Color scheme: Greens, earth tones, natural colors matching content
-- Organic and fresh feeling
-
-【技术规格】
-- Vertical 3:4 aspect ratio (2048x2730 pixels, 2K resolution)
-- Ultra-high definition quality
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：自然场景、绿色植物或有机纹理
+- 光线：柔和日光，自然阴影
+- 构图：开放通透，呼吸空间，网格结构
+- 元素：植物、叶子、自然材料
+- 配色方案：绿色、大地色调，与内容匹配的自然色彩
+- 有机和清新的感觉
 
 【文字排版】
-- Natural and friendly typography
-- Layout split: Top 30% for Title, Bottom 70% for Content with natural flow
-- Clear information hierarchy
-- Balanced spacing with natural elements
-- Color accents matching content theme
-- Readable and approachable
+- 自然友好的排版
+- 布局划分：顶部30%用于标题，底部70%用于内容，自然流动
+- 清晰的信息层次
+- 与自然元素平衡的间距
+- 与内容主题匹配的色彩强调
+- 清晰可读且平易近人
 
 【风格一致性】
-- Maintain consistent natural aesthetic
-- Unified color palette matching content theme
-- Consistent natural elements
-- Fresh visual language throughout`
+- 保持一致的自然美学
+- 统一的配色方案，匹配内容主题
+- 一致的自然元素
+- 清新的视觉语言贯穿始终
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   dopamine: {
     id: 'dopamine',
     name: '多巴胺风格',
-    description: '高饱和撞色，快乐写在脸上，远远一眼就知道是你的那张图。',
-    defaultPrompt: `A vibrant dopamine-style vertical poster, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Bold, high-saturation color palette with contrasting colors
-- Dynamic, energetic composition with playful elements
-- Strong visual hierarchy with large, eye-catching title
-- Readable Chinese text with proper typography
-- Bright, natural lighting
-- Paper texture with subtle noise for authentic feel
+    description: '高饱和色彩、活力四射、撞色搭配',
+    defaultPrompt: `【整体风格要求】
+- 大胆、高饱和度的配色方案，对比色搭配
+- 动态、充满活力的构图，带有趣味元素
+- 强烈的视觉层次，大而醒目的标题
+- 清晰可读的中文文字，合适的排版
+- 明亮、自然的光线
+- 纸质纹理，带有微妙噪点，呈现真实质感
 
 【视觉元素】
-- Background: Colorful gradients or patterns matching content theme
-- Typography: Bold, modern fonts with clear hierarchy
-- Color scheme: Bright pink, green, purple, yellow, blue - high contrast combinations
-- Layout: Grid-based structure with dynamic elements
-- Decorative elements: Playful icons, geometric shapes, stickers
-
-【技术规格】
-- Vertical 3:4 aspect ratio
-- 2K resolution (2048x2730 pixels), ultra-high definition
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：彩色渐变或图案，匹配内容主题
+- 排版：粗体、现代字体，清晰的层次
+- 配色方案：明亮的粉色、绿色、紫色、黄色、蓝色 - 高对比度组合
+- 布局：基于网格的结构，带有动态元素
+- 装饰元素：趣味图标、几何形状、贴纸
 
 【文字排版】
-- Layout split: Top 30% for Title Area, Bottom 70% for Content Grid
-- Title text: Massive, bold, colorful font, strictly legible
-- Subtitle text: Medium weight, positioned below title
-- Body content: Listed clearly with custom bullet points (stars or checkmarks)
-- High contrast between text and background for readability
+- 布局划分：顶部30%用于标题区域，底部70%用于内容网格
+- 标题文字：大而醒目、粗体、彩色字体，清晰可读
+- 副标题文字：中等粗细，位于标题下方
+- 正文内容：清晰列出，使用自定义项目符号（星号或对勾）
+- 文字与背景高对比度，确保可读性
 
 【风格一致性】
-- Maintain consistent high-saturation color palette
-- Unified playful aesthetic
-- Consistent dynamic elements and composition style`
+- 保持一致的高饱和度配色方案
+- 统一的趣味美学
+- 一致的动态元素和构图风格
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   morandi: {
     id: 'morandi',
     name: '莫兰迪风格',
-    description: '低饱和奶灰调，淡淡的却很上头，怎么摆都显得很有品。',
-    defaultPrompt: `A sophisticated Morandi-style vertical poster, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Soft, low-saturation color palette (muted tones)
-- Elegant, minimalist composition
-- Strong visual hierarchy with refined typography
-- Soft, diffused lighting
-- High-end aesthetic with artistic feel
-- Subtle paper texture with film grain for authentic look
+    description: '低饱和度、高级灰、柔和雅致',
+    defaultPrompt: `【整体风格要求】
+- 柔和、低饱和度的色彩调色板（灰调色系）
+- 优雅、极简的构图
+- 清晰的视觉层次，精致的排版
+- 柔和、扩散的光线
+- 高端美学，具有艺术感
+- 微妙的纸质纹理，带有胶片颗粒感，呈现真实质感
 
 【视觉元素】
-- Background: Muted, harmonious colors with soft gradients
-- Typography: Elegant, clean fonts with clear hierarchy
-- Color scheme: Soft pastels, muted blues, greens, pinks with gray undertones
-- Layout: Grid-based structure with generous white space
-- Decorative elements: Minimal, sophisticated illustrations or patterns
-
-【技术规格】
-- Vertical 3:4 aspect ratio
-- 2K resolution (2048x2730 pixels), ultra-high definition
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：柔和的和谐色彩，带有渐变效果
+- 排版：优雅、干净的字体，清晰的层次结构
+- 配色方案：柔和的粉彩，柔和的蓝色、绿色、粉色，带有灰色基调
+- 布局：基于网格的结构，留白充足
+- 装饰元素：极简、精致的插画或图案
 
 【文字排版】
-- Layout split: Top 25% for Title, Middle 50% for Content, Bottom 25% for Additional Info
-- Title text: Elegant, medium-bold font, strictly legible
-- Subtitle text: Light weight, positioned below title
-- Body content: Clean, organized layout with proper spacing
-- Soft contrast between text and background
+- 布局划分：顶部25%用于标题，中间50%用于内容，底部25%用于附加信息
+- 标题文字：优雅、中等粗细的字体，清晰可读
+- 副标题文字：细体字，位于标题下方
+- 正文内容：干净、有序的布局，适当的间距
+- 文字与背景的柔和对比
 
 【风格一致性】
-- Maintain consistent low-saturation color palette
-- Unified elegant aesthetic
-- Consistent refined elements and composition style`
+- 保持一致的 low-saturation 色彩调色板
+- 统一的优雅美学
+- 一致的精致元素和构图风格
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   black_gold: {
     id: 'black_gold',
     name: '黑金风格',
-    description: '深色底配金色点缀，一眼就是「尊贵的你」，自带高奢氛围感。',
-    defaultPrompt: `A luxurious black and gold vertical poster, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Dark background with gold accents
-- Luxurious, elegant composition
-- Strong visual hierarchy with sophisticated typography
-- Dramatic lighting with gold highlights
-- High-end aesthetic suitable for luxury brands
-- Subtle texture (velvet or metallic) for authentic feel
+    description: '奢华质感、金色点缀、深色背景',
+    defaultPrompt: `【整体风格要求】
+- 深色背景，金色强调
+- 奢华、优雅的构图
+- 强烈的视觉层次，精致的排版
+- 戏剧性的光线，金色高光
+- 高端美学，适合奢侈品牌
+- 微妙的纹理（天鹅绒或金属质感），呈现真实质感
 
 【视觉元素】
-- Background: Deep black, dark gray, or navy blue
-- Typography: Elegant, serif or script fonts with gold accents
-- Color scheme: Black, dark tones with gold, bronze, or copper highlights
-- Layout: Grid-based structure with balanced composition
-- Decorative elements: Gold patterns, geometric shapes, minimalist illustrations
-
-【技术规格】
-- Vertical 3:4 aspect ratio
-- 2K resolution (2048x2730 pixels), ultra-high definition
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：深黑、深灰或海军蓝
+- 排版：优雅、衬线或手写字体，带有金色强调
+- 配色方案：黑色、深色调，带有金色、青铜色或铜色高光
+- 布局：基于网格的结构，平衡的构图
+- 装饰元素：金色图案、几何形状、极简插画
 
 【文字排版】
-- Layout split: Top 30% for Title Area with gold accents, Bottom 70% for Content
-- Title text: Large, elegant font with gold color, strictly legible
-- Subtitle text: Medium weight, gold or light gray color
-- Body content: Clean, organized layout with proper spacing
-- High contrast between text and dark background
+- 布局划分：顶部30%用于标题区域，带有金色强调，底部70%用于内容
+- 标题文字：大而优雅的字体，金色，清晰可读
+- 副标题文字：中等粗细，金色或浅灰色
+- 正文内容：干净、有序的布局，适当的间距
+- 文字与深色背景高对比度
 
 【风格一致性】
-- Maintain consistent black and gold color scheme
-- Unified luxurious aesthetic
-- Consistent elegant elements and composition style`
+- 保持一致的黑金配色方案
+- 统一的奢华美学
+- 一致的优雅元素和构图风格
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   minimal_white: {
     id: 'minimal_white',
     name: '极简白',
-    description: '几乎全是白，但一点都不空，主角是谁一眼就看得见。',
-    defaultPrompt: `An ultra-minimalist white vertical poster, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Pure white background with minimal elements
-- Extreme simplicity with focus on content
-- Strong visual hierarchy with clean typography
-- Soft, natural lighting
-- High-end, editorial aesthetic
-- Subtle paper texture for authentic feel
+    description: '纯白背景、极致简洁、突出内容',
+    defaultPrompt: `【整体风格要求】
+- 纯白背景，极简元素
+- 极致的简洁，聚焦内容
+- 强烈的视觉层次，干净的排版
+- 柔和、自然的光线
+- 高端、编辑风格的美学
+- 微妙的纸质纹理，呈现真实质感
 
 【视觉元素】
-- Background: 100% pure white
-- Typography: Clean, sans-serif fonts with clear hierarchy
-- Color scheme: White with minimal accent colors matching content
-- Layout: Grid-based structure with maximum white space
-- Decorative elements: None or extremely minimal
-
-【技术规格】
-- Vertical 3:4 aspect ratio
-- 2K resolution (2048x2730 pixels), ultra-high definition
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：100%纯白
+- 排版：干净、无衬线字体，清晰的层次
+- 配色方案：白色，带有与内容匹配的极简强调色
+- 布局：基于网格的结构，最大留白空间
+- 装饰元素：无或极度极简
 
 【文字排版】
-- Layout split: Top 20% for Title, Middle 60% for Content, Bottom 20% for Additional Info
-- Title text: Clean, bold font, strictly legible
-- Subtitle text: Light weight, positioned below title
-- Body content: Simple, organized layout with generous spacing
-- High contrast between text and white background
+- 布局划分：顶部20%用于标题，中间60%用于内容，底部20%用于附加信息
+- 标题文字：干净、粗体字体，清晰可读
+- 副标题文字：细体，位于标题下方
+- 正文内容：简单、有序的布局，充足的间距
+- 文字与白色背景高对比度
 
 【风格一致性】
-- Maintain consistent pure white background
-- Unified minimalist aesthetic
-- Consistent clean elements and composition style`
+- 保持一致的纯白背景
+- 统一的极简美学
+- 一致的干净元素和构图风格
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   cyberpunk: {
     id: 'cyberpunk',
     name: '赛博朋克',
-    description: '城市夜景 + 霓虹灯，酷到发光，适合一切赛博、AI、潮酷主题。',
-    defaultPrompt: `A cyberpunk-style vertical poster, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Dark background with neon accents (blue, purple, pink)
-- Futuristic, dystopian composition
-- Strong visual hierarchy with tech-inspired typography
-- Dramatic lighting with neon glows
-- High-tech aesthetic with digital elements
-- Subtle digital noise for authentic cyberpunk feel
+    description: '霓虹光效、未来科技、暗色调',
+    defaultPrompt: `【整体风格要求】
+- 深色背景，霓虹光强调（蓝色、紫色、粉色）
+- 未来主义、反乌托邦的构图
+- 强烈的视觉层次，科技风格的排版
+- 戏剧性的光线，霓虹光晕
+- 高科技美学，带有数字元素
+- 微妙的数字噪点，呈现真实赛博朋克感
 
 【视觉元素】
-- Background: Dark urban or digital landscapes
-- Typography: Futuristic, angular fonts with neon accents
-- Color scheme: Black, dark blues with neon pink, purple, blue highlights
-- Layout: Grid-based structure with dynamic, asymmetric elements
-- Decorative elements: Neon signs, holographic effects, circuit patterns
-
-【技术规格】
-- Vertical 3:4 aspect ratio
-- 2K resolution (2048x2730 pixels), ultra-high definition
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：深色城市或数字景观
+- 排版：未来主义、有角度的字体，带有霓虹强调
+- 配色方案：黑色、深蓝色，带有霓虹粉色、紫色、蓝色高光
+- 布局：基于网格的结构，动态、不对称的元素
+- 装饰元素：霓虹标志、全息效果、电路图案
 
 【文字排版】
-- Layout split: Top 30% for Title with neon glow, Bottom 70% for Content
-- Title text: Large, futuristic font with neon color, strictly legible
-- Subtitle text: Medium weight, neon or light color
-- Body content: Tech-inspired layout with digital elements
-- High contrast between text and dark background
+- 布局划分：顶部30%用于标题，带有霓虹光晕，底部70%用于内容
+- 标题文字：大而未来主义的字体，霓虹色，清晰可读
+- 副标题文字：中等粗细，霓虹色或浅色
+- 正文内容：科技风格的布局，带有数字元素
+- 文字与深色背景高对比度
 
 【风格一致性】
-- Maintain consistent cyberpunk color scheme
-- Unified futuristic aesthetic
-- Consistent digital elements and composition style`
+- 保持一致的赛博朋克配色方案
+- 统一的未来主义美学
+- 一致的数字元素和构图风格
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   },
   retro_vintage: {
     id: 'retro_vintage',
     name: '复古怀旧',
-    description: '像从旧相册里翻出来的那张，很适合讲故事、讲回忆。',
-    defaultPrompt: `A retro vintage-style vertical poster, 3:4 aspect ratio, 2048x2730 pixels, 2K resolution.
-
-【整体风格要求】
-- Warm, vintage color palette (sepia, faded tones)
-- Nostalgic composition with retro elements
-- Strong visual hierarchy with classic typography
-- Soft, warm lighting
-- Film grain texture for authentic vintage feel
-- High-end, artistic aesthetic
+    description: '胶片质感、复古色调、年代感',
+    defaultPrompt: `【整体风格要求】
+- 温暖的复古配色方案（棕褐色、褪色色调）
+- 怀旧的构图，带有复古元素
+- 强烈的视觉层次，经典排版
+- 柔和、温暖的光线
+- 胶片颗粒纹理，呈现真实复古感
+- 高端、艺术美学
 
 【视觉元素】
-- Background: Faded textures, vintage patterns, or old photographs
-- Typography: Classic serif or retro script fonts
-- Color scheme: Warm browns, sepia, faded reds, oranges, yellows
-- Layout: Grid-based structure with classic composition
-- Decorative elements: Vintage illustrations, old paper textures, retro icons
-
-【技术规格】
-- Vertical 3:4 aspect ratio
-- 2K resolution (2048x2730 pixels), ultra-high definition
-- Suitable for mobile screen viewing
-- All text content must be fully presented
-- No watermarks, logos, or brand identifiers
-- Correct vertical orientation, no rotation or inversion
+- 背景：褪色纹理、复古图案或旧照片
+- 排版：经典衬线或复古手写字体
+- 配色方案：温暖的棕色、棕褐色、褪色的红色、橙色、黄色
+- 布局：基于网格的结构，经典构图
+- 装饰元素：复古插画、旧纸纹理、复古图标
 
 【文字排版】
-- Layout split: Top 30% for Title Area, Bottom 70% for Content Grid
-- Title text: Classic, elegant font with vintage color, strictly legible
-- Subtitle text: Medium weight, positioned below title
-- Body content: Clean, organized layout with retro styling
-- Warm contrast between text and background
+- 布局划分：顶部30%用于标题区域，底部70%用于内容网格
+- 标题文字：经典、优雅的字体，复古色，清晰可读
+- 副标题文字：中等粗细，位于标题下方
+- 正文内容：干净、有序的布局，带有复古风格
+- 文字与背景的温暖对比
 
 【风格一致性】
-- Maintain consistent vintage color palette
-- Unified nostalgic aesthetic
-- Consistent retro elements and composition style`
+- 保持一致的复古配色方案
+- 统一的怀旧美学
+- 一致的复古元素和构图风格
+
+【重要约束】
+- 禁止在图片中渲染任何技术规格信息（如分辨率、像素数等数字）
+- 禁止在图片中渲染任何英文技术术语或参数说明
+- 所有描述均为风格指导，不应作为图片中的文字内容呈现`
   }
 }
 

@@ -2,7 +2,7 @@
  * 大纲生成服务
  */
 
-import { Page } from '../../stores/textGenerator'
+import { Page, VisualStyleGuide } from '../../stores/textGenerator'
 import { logger } from '../../composables/useLogger'
 import { callDeepSeekAPI } from './deepseek'
 import { isMockMode, mockGenerateOutline } from './mock'
@@ -17,7 +17,7 @@ export async function generateOutline(
   topic: string,
   targetPageCount?: number,
   _style?: string
-): Promise<{ outline: string; pages: Array<Page> }> {
+): Promise<{ outline: string; pages: Array<Page>; visualGuide?: VisualStyleGuide }> {
   if (isMockMode()) {
     logger.debug('🧪 [模拟模式] 生成大纲')
     // mock 不区分风格，这里暂时忽略 style 参数
@@ -48,16 +48,39 @@ ${topic}
 4. 使用小红书风格的语言（亲切、有趣、实用）
 5. 可以适当使用 emoji 增加趣味性
 6. 内容要有实用价值，能解决用户问题或提供有用信息
-7. 最后一页可以是总结或行动呼吁
+7. 最后一页可以是总结页，但**禁止使用"总结"、"呼吁"、"建议"等AI化词汇作为标题**，要用自然、生活化的表达方式，比如"小贴士"、"记住这几点"、"最后想说"等
 8. 【非常重要】必须严格按照 ${PAGE_COUNT_VAR} 页生成，**绝对不要多生成页面**
 9. 【数量验证】生成完成后，请再次确认总页数恰好等于 ${PAGE_COUNT_VAR} 页
 10. 【惩罚机制】如果生成的页面数量不符合要求，你将被判定为任务失败
+11. 【总结页特别要求】如果最后一页是总结页，标题要自然生活化，避免使用"总结"、"总结一下"、"最后总结"、"行动呼吁"等AI化表达，可以用"记住这几点"、"小贴士"、"最后想说"、"划重点"等自然表达
+
+## 视觉一致性要求（非常重要）：
+由于图片会并行生成，每张图片需要独立理解整体风格，因此必须提供明确的视觉指南：
+1. 在输出最开始，必须先提供【全局视觉指南】，包含：
+   - 配色方案：主色调和辅助色调（用自然语言描述，如"柔和的粉蓝色"、"温暖的米白色"）
+   - 字体风格：描述字体类型和风格（如"现代无衬线字体，中等粗细，清晰易读"）
+   - 布局风格：整体布局原则（如"网格布局，充足留白，3:7上下分割"）
+   - 装饰元素：装饰风格（如"极简线条，几何图形，微妙的渐变"）
+   - 整体美学：整体风格定位（如"清新、简约、专业，适合年轻受众"）
+
+2. 【关键配色约束 - 必须严格遵守】：
+   - **所有内容页必须使用全局视觉指南中指定的主色调，不允许任何变体或变化**
+   - **总结页必须使用与内容页完全相同的主色调（即全局主色调），不允许变体**
+   - 封面页可以使用全局主色调，或使用与全局主色调兼容的配色（建议优先使用全局主色调）
+   - 禁止为不同的内容页分配不同的主色调，这会导致帖子整体性被破坏
+
+3. 每页必须包含【视觉元数据】部分，描述该页的视觉特征：
+   - **主色调**（内容页和总结页必须严格使用全局主色调，封面页可以使用全局主色调或兼容配色）
+   - 视觉重点：该页的视觉重点布局（如"顶部大标题，底部留白"）
+   - 布局模式：该页的具体布局方式（如"上下分割，标题占30%"）
+   - 装饰风格：该页的装饰风格（应与全局装饰元素风格一致）
 
 ## 输出格式（必须严格遵守，否则任务失败）：
+- **输出顺序**：首先输出【全局视觉指南】，然后才是各页面内容
 - 必须使用 <page> 标签作为每一页的分隔符（这是强制分隔符，必须在每一页前使用）
 - 每页第一行必须是页面类型标记，只能是 [封面]、[内容] 或 [总结] 中的一个
-- 页面类型标记后面必须紧跟该页的具体内容描述
-- 内容要具体、详细，方便后续生成图片
+- 每页必须包含【视觉元数据】部分（在页面类型标记之后，具体内容之前）
+- 页面内容要具体、详细，方便后续生成图片
 - 每页内容末尾必须包含"配图建议："，描述该页适合的配图场景（这是必需的，不能省略）
 - 避免在内容中使用 | 竖线符号（会与 markdown 表格冲突）
 - 不要在输出中添加任何多余的内容或说明
@@ -70,7 +93,21 @@ ${topic}
 
 ## 示例输出（当 ${PAGE_COUNT_VAR} 为1时）：
 
+【全局视觉指南】
+配色方案：主色调 - 温暖的咖啡棕色，辅助色 - 米白色、浅灰色、淡金色
+字体风格：现代无衬线字体，中等粗细，清晰易读
+布局风格：简洁布局，充足留白，上下分割结构
+装饰元素：极简线条，温暖色调的几何图形，微妙的渐变
+整体美学：温馨、舒适、专业，适合生活分享场景
+
+<page>
 [封面]
+【视觉元数据】
+- 主色调：温暖的咖啡棕色
+- 视觉重点：顶部大标题，中间配图区域，底部留白
+- 布局模式：上下分割，标题占30%，配图占50%，留白占20%
+- 装饰风格：极简线条，温暖色调的几何图形
+
 标题：5分钟学会手冲咖啡☕
 副标题：新手也能做出咖啡店的味道
 背景：温馨的咖啡场景，一个家庭布局的咖啡角
@@ -79,7 +116,21 @@ ${topic}
 
 ## 示例输出（当 ${PAGE_COUNT_VAR} 为3时）：
 
+【全局视觉指南】
+配色方案：主色调 - 温暖的咖啡棕色，辅助色 - 米白色、浅灰色、淡金色
+字体风格：现代无衬线字体，中等粗细，清晰易读
+布局风格：简洁布局，充足留白，上下分割结构
+装饰元素：极简线条，温暖色调的几何图形，微妙的渐变
+整体美学：温馨、舒适、专业，适合生活分享场景
+
+<page>
 [封面]
+【视觉元数据】
+- 主色调：温暖的咖啡棕色
+- 视觉重点：顶部大标题，中间配图区域，底部留白
+- 布局模式：上下分割，标题占30%，配图占50%，留白占20%
+- 装饰风格：极简线条，温暖色调的几何图形
+
 标题：5分钟学会手冲咖啡☕
 副标题：新手也能做出咖啡店的味道
 背景：温馨的咖啡场景，一个家庭布局的咖啡角
@@ -88,6 +139,12 @@ ${topic}
 
 <page>
 [内容]
+【视觉元数据】
+- 主色调：温暖的咖啡棕色（与全局一致）
+- 视觉重点：左侧内容列表，右侧留白或小配图
+- 布局模式：左右分割，内容占70%，留白占30%
+- 装饰风格：极简线条，温暖色调的几何图形
+
 第一步：准备器具
 
 必备工具：
@@ -102,6 +159,12 @@ ${topic}
 
 <page>
 [内容]
+【视觉元数据】
+- 主色调：温暖的咖啡棕色（与全局一致）
+- 视觉重点：上方标题，中间内容，下方小贴士
+- 布局模式：上下分割，标题占20%，内容占60%，贴士占20%
+- 装饰风格：极简线条，温暖色调的几何图形
+
 第二步：研磨咖啡豆
 
 研磨粗细度：中细研磨（像细砂糖）
@@ -116,17 +179,21 @@ ${topic}
 
 ### 最后
 现在，请根据用户的主题生成大纲。记住：
-1. 严格使用 <page> 标签分割每一页
-2. 每页开头标注类型：[封面]、[内容]、[总结]
-3. 内容要详细、具体、专业、有价值
-4. 适合制作成小红书图文
-5. 每页末尾必须包含"配图建议："描述配图场景
-6. 避免使用竖线符号 | （会与 markdown 表格冲突）
-7. 【极端关键】必须生成恰好 ${PAGE_COUNT_VAR} 页，不能多也不能少
-8. 【数量检查】在开始生成前，请先规划好这 ${PAGE_COUNT_VAR} 页的内容结构，确保最终输出恰好 ${PAGE_COUNT_VAR} 页
-9. 【头图模式检查】如果 ${PAGE_COUNT_VAR} 为1，只生成一个封面页
+1. **首先输出【全局视觉指南】**，定义统一的配色、字体、布局、装饰和整体美学
+2. 严格使用 <page> 标签分割每一页
+3. 每页开头标注类型：[封面]、[内容]、[总结]
+4. **每页必须包含【视觉元数据】**，描述该页的视觉特征（与全局指南保持一致）
+5. **【配色统一性】所有内容页和总结页必须使用全局视觉指南中指定的主色调，不允许任何变体**
+6. 内容要详细、具体、专业、有价值
+7. 适合制作成小红书图文
+8. 每页末尾必须包含"配图建议："描述配图场景
+9. 避免使用竖线符号 | （会与 markdown 表格冲突）
+10. 【极端关键】必须生成恰好 ${PAGE_COUNT_VAR} 页，不能多也不能少
+11. 【数量检查】在开始生成前，请先规划好这 ${PAGE_COUNT_VAR} 页的内容结构，确保最终输出恰好 ${PAGE_COUNT_VAR} 页
+12. 【头图模式检查】如果 ${PAGE_COUNT_VAR} 为1，只生成一个封面页
+13. 【视觉一致性】确保所有页面的视觉元数据与全局视觉指南保持一致，这样可以保证并行生成的图片风格统一
 
-【特别的！！注意】直接给出大纲内容（不要有任何多余的说明，也就是你直接从[封面]开始，不要有针对用户的回应对话），请输出：`
+【特别的！！注意】直接给出大纲内容（不要有任何多余的说明，也就是你直接从【全局视觉指南】开始，不要有针对用户的回应对话），请输出：`
   
   // 在发送给 AI 之前，将动态变量替换为实际值
   const finalPrompt = prompt.replace(new RegExp(PAGE_COUNT_VAR.replace(/[{}]/g, '\\$&'), 'g'), PAGE_COUNT_VALUE)
@@ -134,19 +201,72 @@ ${topic}
   const systemPrompt = '你是一个专业的小红书内容创作助手，擅长生成吸引人的图文大纲。'
   const result = await callDeepSeekAPI(finalPrompt, systemPrompt)
   
+  // 解析全局视觉指南
+  let visualGuide: VisualStyleGuide | undefined = undefined
+  const visualGuideMatch = result.text.match(/【全局视觉指南】([\s\S]*?)(?=<page>|\[封面\]|$)/i)
+  if (visualGuideMatch && visualGuideMatch[1]) {
+    const guideText = visualGuideMatch[1].trim()
+    
+    // 解析配色方案
+    const primaryColorMatch = guideText.match(/主色调[：:\-]\s*([^\n，,]+)/)
+    const secondaryColorMatch = guideText.match(/辅助色[：:\-]\s*([^\n]+)/)
+    const primaryColor = primaryColorMatch ? primaryColorMatch[1].trim() : '柔和的色调'
+    let secondaryColors: string[] = []
+    if (secondaryColorMatch) {
+      secondaryColors = secondaryColorMatch[1].split(/[，,、]/).map(c => c.trim()).filter(c => c)
+    }
+    
+    // 解析字体风格
+    const typographyMatch = guideText.match(/字体风格[：:\-]\s*([^\n]+)/)
+    const typographyStyle = typographyMatch ? typographyMatch[1].trim() : '现代无衬线字体，清晰易读'
+    
+    // 解析布局风格
+    const layoutMatch = guideText.match(/布局风格[：:\-]\s*([^\n]+)/)
+    const layoutStyle = layoutMatch ? layoutMatch[1].trim() : '简洁布局，充足留白'
+    
+    // 解析装饰元素
+    const decorativeMatch = guideText.match(/装饰元素[：:\-]\s*([^\n]+)/)
+    const decorativeElements = decorativeMatch ? decorativeMatch[1].trim() : '极简线条，几何图形'
+    
+    // 解析整体美学
+    const aestheticMatch = guideText.match(/整体美学[：:\-]\s*([^\n]+)/)
+    const overallAesthetic = aestheticMatch ? aestheticMatch[1].trim() : '清新、简约、专业'
+    
+    visualGuide = {
+      colorPalette: {
+        primary: primaryColor,
+        secondary: secondaryColors.length > 0 ? secondaryColors : ['浅灰色', '米白色']
+      },
+      typographyStyle,
+      layoutStyle,
+      decorativeElements,
+      overallAesthetic
+    }
+    
+    if (import.meta.env.DEV) {
+      logger.debug('解析到的全局视觉指南:', visualGuide)
+    }
+  }
+  
   // 解析大纲为页面数组
   let pages: Array<Page> = []
   
+  // 移除全局视觉指南部分，只保留页面内容
+  let outlineText = result.text
+  if (visualGuideMatch) {
+    outlineText = outlineText.replace(/【全局视觉指南】[\s\S]*?(?=<page>|\[封面\])/i, '').trim()
+  }
+  
   let pageTexts: string[] = []
   // 优先按 <page> 分割
-  if (result.text.includes('<page>')) {
-    pageTexts = result.text.split(/<page>/gi).map(s => s.trim()).filter(s => s)
-  } else if (result.text.includes('---')) {
+  if (outlineText.includes('<page>')) {
+    pageTexts = outlineText.split(/<page>/gi).map(s => s.trim()).filter(s => s)
+  } else if (outlineText.includes('---')) {
     // 如果没有 <page> 标签，尝试按 --- 分割 (向后兼容)
-    pageTexts = result.text.split(/---/gi).map(s => s.trim()).filter(s => s)
+    pageTexts = outlineText.split(/---/gi).map(s => s.trim()).filter(s => s)
   } else {
     // 如果都没有，按 [封面] [内容] [总结] 分割
-    const sections = result.text.split(/(?=\[(?:封面|内容|总结)\])/g)
+    const sections = outlineText.split(/(?=\[(?:封面|内容|总结)\])/g)
     pageTexts = sections.map(s => s.trim()).filter(s => s)
   }
   
@@ -179,6 +299,51 @@ ${topic}
       }
     }
     
+    // 提取视觉元数据（如果存在）
+    let visualMetadata: Page['visualMetadata'] | undefined = undefined
+    const visualMetadataMatch = pageContent.match(/【视觉元数据】([\s\S]*?)(?=\n\n|$)/i)
+    if (visualMetadataMatch && visualMetadataMatch[1]) {
+      const metadataText = visualMetadataMatch[1]
+      
+      // 解析主色调
+      const primaryColorMatch = metadataText.match(/主色调[：:\-]\s*([^\n，,]+)/)
+      const primaryColor = primaryColorMatch ? primaryColorMatch[1].trim() : undefined
+      
+      // 解析辅助色调
+      const secondaryColorMatch = metadataText.match(/辅助色调[：:\-]\s*([^\n]+)/)
+      let secondaryColors: string[] | undefined = undefined
+      if (secondaryColorMatch) {
+        secondaryColors = secondaryColorMatch[1].split(/[，,、]/).map(c => c.trim()).filter(c => c)
+      }
+      
+      // 解析视觉重点
+      const visualFocusMatch = metadataText.match(/视觉重点[：:\-]\s*([^\n]+)/)
+      const visualFocus = visualFocusMatch ? visualFocusMatch[1].trim() : undefined
+      
+      // 解析布局模式
+      const layoutPatternMatch = metadataText.match(/布局模式[：:\-]\s*([^\n]+)/)
+      const layoutPattern = layoutPatternMatch ? layoutPatternMatch[1].trim() : undefined
+      
+      // 解析装饰风格
+      const decorativeStyleMatch = metadataText.match(/装饰风格[：:\-]\s*([^\n]+)/)
+      const decorativeStyle = decorativeStyleMatch ? decorativeStyleMatch[1].trim() : undefined
+      
+      visualMetadata = {
+        primaryColor,
+        secondaryColors,
+        visualFocus,
+        layoutPattern,
+        decorativeStyle
+      }
+      
+      // 从内容中移除视觉元数据部分
+      pageContent = pageContent.replace(/【视觉元数据】[\s\S]*?(?=\n\n|$)/i, '').trim()
+      
+      if (import.meta.env.DEV) {
+        logger.debug(`页面 ${index + 1} 提取视觉元数据:`, visualMetadata)
+      }
+    }
+    
     // 提取内容（移除content:前缀如果存在）
     pageContent = pageContent.replace(/^content:\s*/i, '').trim()
     
@@ -203,7 +368,8 @@ ${topic}
       index: index++,
       type: pageType,
       content: pageContent,
-      imagePrompt: imagePrompt
+      imagePrompt: imagePrompt,
+      visualMetadata: visualMetadata
     })
   }
   
@@ -333,7 +499,8 @@ ${topic}
       if (p.type === 'cover') {
         p.content = `📌 ${topic}\n\n开始你的精彩内容之旅`
       } else if (p.type === 'summary') {
-        p.content = `总结本次主题「${topic}」的关键要点，帮助读者快速回顾重点并给出行动建议。`
+        // 使用更自然的表达，避免AI化
+        p.content = `围绕主题「${topic}」的关键要点回顾，用生活化的方式帮助读者记住重点。`
       } else {
         p.content = `围绕主题「${topic}」补充一页有价值的内容，提供具体案例、技巧或注意事项。`
       }
@@ -346,7 +513,7 @@ ${topic}
       if (p.type === 'cover') {
         p.imagePrompt = `生成一张与主题「${topic}」相关的吸睛封面配图，突出标题和整体氛围。`
       } else if (p.type === 'summary') {
-        p.imagePrompt = `生成一张总结页配图，用清晰的信息图或要点列表的方式概括本次主题「${topic}」的重点。`
+        p.imagePrompt = `生成一张与主题「${topic}」相关的配图，用清晰的信息图或要点列表的方式呈现关键信息，风格自然不刻意。`
       } else {
         p.imagePrompt = `根据本页内容生成一张小红书风格的配图，突出关键信息和视觉对比效果。`
       }
@@ -358,7 +525,8 @@ ${topic}
   
   return {
     outline: result.text,
-    pages: pages
+    pages: pages,
+    visualGuide: visualGuide
   }
 }
 

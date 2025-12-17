@@ -128,7 +128,9 @@ export async function callGoogleGenAIAPI(
   
   try {
     // 图片分析请求可能需要更长时间，设置更长的超时
-    const timeoutMs = images && images.length > 0 ? 180000 : 60000 // 有图片时180秒，无图片时60秒
+    // 文生图模式：120秒（避免60秒超时导致重复请求，节约成本）
+    // 图生图模式：180秒（包含图片分析，需要更长时间）
+    const timeoutMs = images && images.length > 0 ? 180000 : 120000 // 有图片时180秒，无图片时120秒
     
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
@@ -334,14 +336,16 @@ export async function callGoogleGenAIAPI(
   } catch (error: any) {
     // 检查是否是超时错误
     if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+      const timeoutSeconds = images.length > 0 ? 180 : 120
       logger.error('API 请求超时:', {
         endpoint,
         hasImages: images.length > 0,
-        timeout: images.length > 0 ? '180s' : '60s'
+        timeout: `${timeoutSeconds}s`,
+        actualDuration: Date.now() - startTime
       })
       throw errorHandler.createError(
         'REQUEST_TIMEOUT',
-        `API 请求超时（${images.length > 0 ? '180秒' : '60秒'}）。图片分析可能需要更长时间，请检查：\n1. 网络连接是否稳定\n2. API 服务是否正常\n3. 图片文件是否过大\n\n建议：稍后重试或减小图片大小`
+        `API 请求超时（${timeoutSeconds}秒）。${images.length > 0 ? '图片分析' : '图片生成'}可能需要更长时间，请检查：\n1. 网络连接是否稳定\n2. API 服务是否正常\n3. ${images.length > 0 ? '图片文件是否过大' : '提示词是否过于复杂'}\n\n建议：稍后重试${images.length > 0 ? '或减小图片大小' : ''}`
       )
     }
     

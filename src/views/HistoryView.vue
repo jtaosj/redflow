@@ -24,19 +24,20 @@
         v-for="item in history"
         :key="item.id"
         class="history-card"
-        @click="openDetail(item)"
       >
-        <div v-if="item.originalImageUrl || (item.pages && item.pages[0]?.imageUrl)" class="card-image">
-          <img :src="item.originalImageUrl || item.pages?.[0]?.imageUrl" alt="Preview" />
-          <!-- 类型标签 -->
-          <div class="card-type-badge">
-            <span v-if="item.mode === 'PROMPT_TO_IMAGE'">🎨 提示词生成</span>
-            <span v-else-if="item.mode === 'TEXT_TO_IMAGE' || item.topic">📝 文本生成</span>
-            <span v-else-if="item.mode === 'IMAGE_TO_IMAGE' || item.analysis">🖼️ 图生图</span>
-            <span v-else>📝 文本生成</span>
+        <div class="card-image-wrapper" @click="openDetail(item)">
+          <div v-if="item.originalImageUrl || (item.pages && item.pages[0]?.imageUrl)" class="card-image">
+            <img :src="item.originalImageUrl || item.pages?.[0]?.imageUrl" alt="Preview" />
+            <!-- 类型标签 -->
+            <div class="card-type-badge">
+              <span v-if="item.mode === 'PROMPT_TO_IMAGE'">🎨 提示词生成</span>
+              <span v-else-if="item.mode === 'TEXT_TO_IMAGE' || item.topic">📝 文本生成</span>
+              <span v-else-if="item.mode === 'IMAGE_TO_IMAGE' || item.analysis">🖼️ 图生图</span>
+              <span v-else>📝 文本生成</span>
+            </div>
           </div>
         </div>
-        <div class="card-content">
+        <div class="card-content" @click="openDetail(item)">
           <h4>{{ item.projectName || item.analysis?.name || item.topic || '未命名作品' }}</h4>
           <p class="card-meta">
             {{ new Date(item.createdAt || 0).toLocaleDateString() }}
@@ -49,6 +50,18 @@
             {{ item.topic }}
           </div>
         </div>
+        <!-- 删除按钮 -->
+        <button
+          class="delete-button"
+          @click.stop.prevent="handleDelete(item)"
+          @mousedown.stop
+          title="删除此记录"
+          type="button"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -58,22 +71,54 @@
       :item="selectedItem"
       @close="closeDetailModal"
     />
+
+    <!-- 删除确认弹窗 -->
+    <Modal
+      v-model="deleteModalVisible"
+      title="确认删除"
+      size="sm"
+      :closable="true"
+      :closeOnBackdrop="true"
+      @close="cancelDelete"
+    >
+      <div class="delete-confirm-content">
+        <div class="delete-confirm-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </div>
+        <p class="delete-confirm-message">
+          确定要删除「<strong>{{ deleteItemName }}</strong>」吗？
+        </p>
+        <p class="delete-confirm-warning">此操作不可恢复，请谨慎操作。</p>
+      </div>
+      <template #footer>
+        <Button variant="secondary" @click="cancelDelete">取消</Button>
+        <Button variant="danger" @click="confirmDelete">确认删除</Button>
+      </template>
+    </Modal>
   </PageContainer>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getUserHistory, getCurrentUser, registerUser, loginUser } from '../services/storage'
+import { getUserHistory, getCurrentUser, registerUser, loginUser, deleteHistoryItem } from '../services/storage'
 import { GeneratedResult } from '../types'
 import HistoryDetailModal from '../components/HistoryDetailModal.vue'
 import { PageContainer, PageHeader } from '../components/layout'
+import { Modal, Button } from '../components/ui'
 
 const route = useRoute()
 const loading = ref(false)
 const history = ref<GeneratedResult[]>([])
 const detailModalVisible = ref(false)
 const selectedItem = ref<GeneratedResult | null>(null)
+
+// 删除确认 Modal 状态
+const deleteModalVisible = ref(false)
+const itemToDelete = ref<GeneratedResult | null>(null)
+const deleteItemName = ref('')
 
 const loadHistory = () => {
   console.log('=== 开始加载历史记录 ===')
@@ -170,6 +215,67 @@ const viewDetail = async (item: GeneratedResult) => {
   openDetail(item)
 }
 
+const handleDelete = (item: GeneratedResult) => {
+  // 显示删除确认 Modal
+  itemToDelete.value = item
+  deleteItemName.value = item.projectName || item.analysis?.name || item.topic || '未命名作品'
+  deleteModalVisible.value = true
+}
+
+const cancelDelete = () => {
+  deleteModalVisible.value = false
+  itemToDelete.value = null
+  deleteItemName.value = ''
+}
+
+const confirmDelete = async () => {
+  if (!itemToDelete.value) {
+    deleteModalVisible.value = false
+    return
+  }
+
+  try {
+    const item = itemToDelete.value
+    const user = getCurrentUser()
+    
+    if (!user) {
+      alert('未找到用户信息，无法删除')
+      console.error('删除失败：未找到用户')
+      deleteModalVisible.value = false
+      return
+    }
+    
+    if (!item.id) {
+      alert('删除失败：记录ID不存在')
+      console.error('删除失败：item.id 不存在', item)
+      deleteModalVisible.value = false
+      return
+    }
+    
+    console.log('开始删除历史记录:', { userId: user.id, itemId: item.id, itemName: deleteItemName.value })
+    
+    const success = deleteHistoryItem(user.id, item.id)
+    
+    if (success) {
+      console.log('✅ 历史记录已删除:', item.id)
+      // 关闭 Modal
+      deleteModalVisible.value = false
+      itemToDelete.value = null
+      deleteItemName.value = ''
+      // 重新加载历史记录
+      loadHistory()
+    } else {
+      console.error('删除失败：deleteHistoryItem 返回 false')
+      alert('删除失败，请检查控制台获取详细信息')
+    }
+  } catch (error: any) {
+    console.error('❌ 删除历史记录时出错:', error)
+    alert(`删除失败：${error?.message || '未知错误'}\n\n请检查控制台获取详细信息。`)
+  } finally {
+    deleteModalVisible.value = false
+  }
+}
+
 onMounted(() => {
   loadHistory()
 })
@@ -214,15 +320,24 @@ watch(() => route.path, (newPath) => {
 .history-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-  cursor: pointer;
+  overflow: visible; /* 改为 visible，确保删除按钮可见 */
   transition: all 0.2s;
   border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.history-card .card-image-wrapper {
+  overflow: hidden; /* 只在图片区域使用 overflow: hidden */
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .history-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-md);
+}
+
+.card-image-wrapper {
+  cursor: pointer;
 }
 
 .card-image {
@@ -277,6 +392,89 @@ watch(() => route.path, (newPath) => {
   font-size: 14px;
   color: var(--text-sub);
   line-height: 1.5;
+}
+
+.card-content {
+  cursor: pointer;
+}
+
+.delete-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 100;
+  color: var(--text-main);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 0;
+  margin: 0;
+  outline: none;
+}
+
+.delete-button:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.delete-button:hover {
+  background: #ff4444;
+  color: white;
+  border-color: #ff4444;
+  transform: scale(1.1);
+}
+
+.delete-button:active {
+  transform: scale(0.95);
+}
+
+.delete-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 删除确认 Modal 样式 */
+.delete-confirm-content {
+  text-align: center;
+  padding: var(--spacing-md) 0;
+}
+
+.delete-confirm-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--spacing-lg);
+  color: #ff4444;
+}
+
+.delete-confirm-icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.delete-confirm-message {
+  font-size: var(--font-lg);
+  color: var(--text-main);
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.6;
+}
+
+.delete-confirm-message strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.delete-confirm-warning {
+  font-size: var(--font-sm);
+  color: var(--text-sub);
+  margin-top: var(--spacing-md);
 }
 </style>
 

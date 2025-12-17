@@ -47,28 +47,5 @@ Thumbs.db
 *.temp
 .cache/
 
-# Debug and log files
-.cursor/
-*.log
-debug.log
 
-# Build artifacts
-*.map
-*.d.ts.map
-
-# IDE specific
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS specific
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Environment variables
-.env.local
-.env.*.local
 

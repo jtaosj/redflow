@@ -8,8 +8,15 @@
             <polyline points="22 4 12 14.01 9 11.01"></polyline>
           </svg>
         </div>
-        <h2 class="completion-title">生成完成！</h2>
-        <p class="completion-subtitle">所有图片已生成完毕，请完善项目信息后保存</p>
+        <h2 class="completion-title">{{ completionStatus === 'partial' ? '部分生成完成' : '生成完成！' }}</h2>
+        <p class="completion-subtitle">
+          <span v-if="completionStatus === 'partial'">
+            有 {{ failedCount }} 张图片生成失败，您可以继续保存或重试失败的图片
+          </span>
+          <span v-else>
+            所有图片已生成完毕，请完善项目信息后保存
+          </span>
+        </p>
       </div>
 
       <div class="completion-modal-body">
@@ -42,7 +49,7 @@
         </button>
         <button class="btn btn-primary" @click="handleConfirm" :disabled="saving || !projectName.trim()">
           <span v-if="saving">保存中...</span>
-          <span v-else>完成并保存</span>
+          <span v-else>{{ completionStatus === 'partial' ? '保存（部分完成）' : '完成并保存' }}</span>
         </button>
       </div>
     </div>
@@ -56,6 +63,8 @@ interface Props {
   visible: boolean
   initialProjectName?: string
   initialProjectDescription?: string
+  completionStatus?: 'completed' | 'partial'
+  failedCount?: number
 }
 
 interface Emits {
@@ -65,7 +74,9 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   initialProjectName: '',
-  initialProjectDescription: ''
+  initialProjectDescription: '',
+  completionStatus: 'completed',
+  failedCount: 0
 })
 
 const emit = defineEmits<Emits>()

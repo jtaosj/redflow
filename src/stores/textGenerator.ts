@@ -1,11 +1,33 @@
 import { defineStore } from 'pinia'
 
+// 全局视觉指南接口
+export interface VisualStyleGuide {
+  colorPalette: {
+    primary: string              // 主色调
+    secondary: string[]          // 辅助色调列表
+    accent?: string              // 强调色
+  }
+  typographyStyle: string        // 字体风格（如："现代无衬线，中等粗细"）
+  layoutStyle: string            // 布局风格（如："网格布局，充足留白"）
+  decorativeElements: string     // 装饰元素风格（如："极简线条，几何图形"）
+  overallAesthetic: string       // 整体美学（如："清新、简约、专业"）
+}
+
 export interface Page {
   index: number
   type: 'cover' | 'content' | 'summary'
   content: string
   imageUrl?: string
   imagePrompt?: string // 配图建议，可编辑
+  
+  // 视觉元数据（可选，用于保证并行生成时的视觉一致性）
+  visualMetadata?: {
+    primaryColor?: string        // 该页主色调（如："柔和的粉蓝色"）
+    secondaryColors?: string[]   // 辅助色调
+    visualFocus?: string         // 视觉重点（如："左侧大标题，右侧配图"）
+    decorativeStyle?: string     // 装饰风格（如："极简线条，几何图形"）
+    layoutPattern?: string       // 布局模式（如："上下分割，3:7比例"）
+  }
 }
 
 export interface GeneratedImage {
@@ -42,6 +64,7 @@ export interface TextGeneratorState {
   outline: {
     raw: string
     pages: Page[]
+    visualGuide?: VisualStyleGuide  // 全局视觉指南（可选，用于保证所有页面视觉一致性）
   }
 
   // 生成进度
@@ -132,6 +155,121 @@ export const useTextGeneratorStore = defineStore('textGenerator', {
     }
   },
 
+  getters: {
+    // 获取需要生成的页面列表（考虑头图模式）
+    getPagesToGenerate(): Page[] {
+      if (this.headImageMode) {
+        const coverPage = this.outline.pages.find(p => p.type === 'cover')
+        return coverPage ? [coverPage] : (this.outline.pages.length > 0 ? [this.outline.pages[0]] : [])
+      }
+      return this.outline.pages
+    },
+
+    // 检查所有需要的图片是否都完成
+    isAllCompleted(): boolean {
+      const pagesToGenerate = this.getPagesToGenerate
+      if (pagesToGenerate.length === 0) return false
+      
+      const result = pagesToGenerate.every(page => {
+        const image = this.images.find(img => img.index === page.index)
+        const isDone = image && image.status === 'done' && image.url
+        if (import.meta.env.DEV && !isDone) {
+          console.log('🔍 [Store] isAllCompleted 检查页面:', {
+            pageIndex: page.index,
+            hasImage: !!image,
+            imageStatus: image?.status,
+            hasUrl: !!image?.url,
+            isDone
+          })
+        }
+        return isDone
+      })
+      
+      if (import.meta.env.DEV) {
+        console.log('🔍 [Store] isAllCompleted 结果:', {
+          pagesToGenerateCount: pagesToGenerate.length,
+          result,
+          pagesToGenerate: pagesToGenerate.map(p => p.index),
+          images: this.images.map(img => ({ index: img.index, status: img.status, hasUrl: !!img.url }))
+        })
+      }
+      
+      return result
+    },
+
+    // 检查是否有失败的图片（在需要生成的页面中）
+    hasFailedImages(): boolean {
+      const pagesToGenerate = this.getPagesToGenerate
+      return pagesToGenerate.some(page => {
+        const image = this.images.find(img => img.index === page.index)
+        return image && image.status === 'error'
+      })
+    },
+
+    // 完成状态
+    completionStatus(): 'pending' | 'completed' | 'partial' {
+      // 如果还没有开始生成，返回 pending
+      if (this.progress.status !== 'generating' && this.progress.status !== 'done') {
+        if (import.meta.env.DEV) {
+          console.log('🔍 [Store] completionStatus: pending (未开始生成)', {
+            progressStatus: this.progress.status
+          })
+        }
+        return 'pending'
+      }
+      
+      const allCompleted = this.isAllCompleted
+      const hasFailed = this.hasFailedImages
+      
+      // 如果所有图片都完成且没有错误，返回 completed
+      if (allCompleted && !hasFailed) {
+        if (import.meta.env.DEV) {
+          console.log('🔍 [Store] completionStatus: completed')
+        }
+        return 'completed'
+      }
+      
+      // 如果所有图片都完成但有错误，返回 partial
+      if (allCompleted && hasFailed) {
+        if (import.meta.env.DEV) {
+          console.log('🔍 [Store] completionStatus: partial (有失败)')
+        }
+        return 'partial'
+      }
+      
+      // 其他情况返回 pending
+      if (import.meta.env.DEV) {
+        console.log('🔍 [Store] completionStatus: pending (未全部完成)', {
+          allCompleted,
+          hasFailed,
+          progressStatus: this.progress.status
+        })
+      }
+      return 'pending'
+    },
+
+    // 是否应该显示完成模态框
+    shouldShowCompletionModal(): boolean {
+      const status = this.completionStatus
+      const result = (status === 'completed' || status === 'partial') &&
+                     this.progress.total > 0
+      
+      // 调试日志（仅在开发环境）
+      if (import.meta.env.DEV && this.progress.total > 0) {
+        console.log('🔍 [Store] shouldShowCompletionModal 计算:', {
+          completionStatus: status,
+          progressTotal: this.progress.total,
+          progressStatus: this.progress.status,
+          isAllCompleted: this.isAllCompleted,
+          hasFailedImages: this.hasFailedImages,
+          result
+        })
+      }
+      
+      return result
+    }
+  },
+
   actions: {
     // 设置主题
     setTopic(topic: string) {
@@ -171,9 +309,10 @@ export const useTextGeneratorStore = defineStore('textGenerator', {
     },
 
     // 设置大纲
-    setOutline(raw: string, pages: Page[]) {
+    setOutline(raw: string, pages: Page[], visualGuide?: VisualStyleGuide) {
       this.outline.raw = raw
       this.outline.pages = pages
+      this.outline.visualGuide = visualGuide
       this.stage = 'outline'
       this.saveToStorage()
     },
@@ -246,11 +385,25 @@ export const useTextGeneratorStore = defineStore('textGenerator', {
       this.progress.current = 0
       this.progress.total = this.outline.pages.length
       this.progress.status = 'generating'
-      this.images = this.outline.pages.map(page => ({
-        index: page.index,
-        url: '',
-        status: 'generating'
-      }))
+      
+      // 初始化图片数组，但保留已完成的图片（避免覆盖）
+      const existingImages = new Map(this.images.map(img => [img.index, img]))
+      this.images = this.outline.pages.map(page => {
+        const existing = existingImages.get(page.index)
+        // 如果图片已存在且已完成，保留其状态；否则初始化为生成中
+        if (existing && existing.status === 'done' && existing.url) {
+          return existing
+        }
+        return {
+          index: page.index,
+          url: '',
+          status: 'generating' as const
+        }
+      })
+      
+      // 重新计算已完成的数量
+      this.progress.current = this.images.filter(img => img.status === 'done').length
+      
       this.saveToStorage()
     },
 
@@ -291,11 +444,17 @@ export const useTextGeneratorStore = defineStore('textGenerator', {
     ) {
       const image = this.images.find(img => img.index === index)
       if (image) {
+        const oldStatus = image.status
         image.url = newUrl
         image.status = 'done'
         delete image.error
         if (debugPrompt) image.debugPrompt = debugPrompt
         if (debugInfo) image.debugInfo = debugInfo
+        
+        // 如果状态从非 done 变为 done，更新进度计数
+        if (oldStatus !== 'done') {
+          this.progress.current++
+        }
       }
       // 同时更新 page 的 imageUrl
       const page = this.outline.pages.find(p => p.index === index)
@@ -335,7 +494,7 @@ export const useTextGeneratorStore = defineStore('textGenerator', {
       return this.outline.pages.filter(page => failedIndices.includes(page.index))
     },
 
-    // 检查是否有失败的图片
+    // 检查是否有失败的图片（已移至 getters，保留此方法以保持向后兼容）
     hasFailedImages() {
       return this.images.some(img => img.status === 'error')
     },
