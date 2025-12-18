@@ -117,6 +117,27 @@ export const COLOR_PALETTES: ColorPalette[] = [
     description: '复古色调、年代感、胶片质感',
     colors: ['sepia', 'faded red', 'old yellow', 'vintage brown', 'muted blue'],
     usage: '适合怀旧、复古、历史主题的内容'
+  },
+  {
+    id: 'klein_blue',
+    name: '克莱因蓝/瑞士主义',
+    description: '极致克莱因蓝与纯白，高饱和度极简主义',
+    colors: ['International Klein Blue (RGB 0, 47, 167)', 'pure white (RGB 255, 255, 255)'],
+    usage: '适合强观点输出、神性主题、画廊感内容，小红书双列流中吸睛效率极高'
+  },
+  {
+    id: 'dieter_rams',
+    name: '德国博朗风',
+    description: '理性极致、工业美学、功能主义',
+    colors: ['off-white', 'cold gray', 'matte black', 'safety orange', 'International Klein Blue'],
+    usage: '适合科技、拆解、拉片分析、说明书式内容，带有严谨感和专业度'
+  },
+  {
+    id: 'hermes_orange',
+    name: '爱马仕橙 & 深空灰',
+    description: '奢华的活力，醒目昂贵，充满能量',
+    colors: ['Hermès Orange (#F37021)', 'space gray', 'matte black', 'titanium silver', 'pure white'],
+    usage: '适合强调痛点解决、实战实操、干货内容，突出含金量和专业度'
   }
 ];
 
@@ -364,6 +385,12 @@ export function getRecommendedColorPalette(content: string): string {
     return 'black_gold';
   } else if (lowerContent.includes('复古') || lowerContent.includes('怀旧') || lowerContent.includes('历史')) {
     return 'retro_vintage';
+  } else if (lowerContent.includes('克莱因') || lowerContent.includes('瑞士') || lowerContent.includes('纯粹') || lowerContent.includes('神性') || lowerContent.includes('画廊')) {
+    return 'klein_blue';
+  } else if (lowerContent.includes('博朗') || lowerContent.includes('理性') || lowerContent.includes('功能主义') || lowerContent.includes('工业设计') || lowerContent.includes('拆解') || lowerContent.includes('拉片')) {
+    return 'dieter_rams';
+  } else if (lowerContent.includes('爱马仕') || lowerContent.includes('橙色') || lowerContent.includes('奢华') || lowerContent.includes('实战') || lowerContent.includes('实操') || lowerContent.includes('干货')) {
+    return 'hermes_orange';
   } else if (lowerContent.includes('极简') || lowerContent.includes('简洁') || lowerContent.includes('现代')) {
     return 'minimal_white';
   } else if (lowerContent.includes('温暖') || lowerContent.includes('家居') || lowerContent.includes('生活')) {

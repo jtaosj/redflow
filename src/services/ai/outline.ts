@@ -6,17 +6,18 @@ import { Page, VisualStyleGuide } from '../../stores/textGenerator'
 import { logger } from '../../composables/useLogger'
 import { callDeepSeekAPI } from './deepseek'
 import { isMockMode, mockGenerateOutline } from './mock'
+import { getStylePrompt, getStyleConfig } from '../../config/stylePrompts'
 
 /**
  * 生成大纲（文本生成图文模式，使用DeepSeek）
  * @param topic 主题内容
  * @param targetPageCount 目标页面数量（包括封面），如果不指定则使用默认范围
- * @param style 可选的视觉风格（目前暂未在 prompt 中直接使用，预留扩展）
+ * @param style 可选的视觉风格ID，用于生成匹配风格的配图建议
  */
 export async function generateOutline(
   topic: string,
   targetPageCount?: number,
-  _style?: string
+  style?: string
 ): Promise<{ outline: string; pages: Array<Page>; visualGuide?: VisualStyleGuide }> {
   if (isMockMode()) {
     logger.debug('🧪 [模拟模式] 生成大纲')
@@ -31,6 +32,32 @@ export async function generateOutline(
   console.log('topic:', topic)
   console.log('targetPageCount:', targetPageCount)
   console.log('pageCount:', pageCount)
+  console.log('style:', style)
+  
+  // 获取风格信息（如果提供了风格ID）
+  let styleInfo = ''
+  let styleName = ''
+  if (style) {
+    const styleConfig = getStyleConfig(style)
+    if (styleConfig) {
+      styleName = styleConfig.name
+      const stylePrompt = getStylePrompt(style)
+      if (stylePrompt) {
+        styleInfo = `\n\n## 用户选择的视觉风格（必须严格遵守）：
+用户已选择「${styleName}」风格，以下是该风格的详细要求：
+
+${stylePrompt}
+
+【重要】在生成【全局视觉指南】和每页的【配图建议】时，必须严格遵守上述风格要求。特别是：
+- 【全局视觉指南】中的配色方案、字体风格、布局风格、装饰元素和整体美学必须与该风格匹配
+- 每页的【配图建议】必须考虑该风格的特点，确保配图场景和视觉效果符合该风格的要求
+- 如果该风格有特定的配色要求（如克莱因蓝+纯白），必须在【全局视觉指南】和【视觉元数据】中体现
+- 如果该风格有特定的设计元素（如瑞士网格、极简线条等），必须在配图建议中体现
+`
+        logger.debug(`[大纲生成] 已加载风格: ${styleName}`)
+      }
+    }
+  }
   
   // 使用动态变量强调页面数量，确保 AI 严格遵守
   const PAGE_COUNT_VAR = `{{PAGE_COUNT}}`
@@ -39,14 +66,14 @@ export async function generateOutline(
   const prompt = `你是一个严格按照指令执行的小红书内容创作专家。用户会给你一个要求以及说明，你必须严格按照要求生成一个适合小红书的图文内容大纲。
 
 用户的要求以及说明：
-${topic}
+${topic}${styleInfo}
 
 ## 绝对严格的要求：
 1. 第一页必须是吸引人的封面/标题页，包含标题和副标题
 2. 【极端关键约束】内容必须严格控制在 ${PAGE_COUNT_VAR} 页（包括封面），**绝对不能多也不能少**
 3. 每页内容简洁有力，适合配图展示
 4. 使用小红书风格的语言（亲切、有趣、实用）
-5. 可以适当使用 emoji 增加趣味性
+5. **【重要】封面页（首图）主标题不得使用 emoji**，内容页和总结页可以适当使用 emoji 增加趣味性
 6. 内容要有实用价值，能解决用户问题或提供有用信息
 7. 最后一页可以是总结页，但**禁止使用"总结"、"呼吁"、"建议"等AI化词汇作为标题**，要用自然、生活化的表达方式，比如"小贴士"、"记住这几点"、"最后想说"等
 8. 【非常重要】必须严格按照 ${PAGE_COUNT_VAR} 页生成，**绝对不要多生成页面**
@@ -75,6 +102,12 @@ ${topic}
    - 布局模式：该页的具体布局方式（如"上下分割，标题占30%"）
    - 装饰风格：该页的装饰风格（应与全局装饰元素风格一致）
 
+4. **【配图建议要求 - 非常重要】**：
+   - 每页内容末尾必须包含"配图建议："，描述该页适合的配图场景（这是必需的，不能省略）
+   - 如果用户选择了特定风格，配图建议必须考虑该风格的特点
+   - 配图建议应该包含：场景描述、视觉元素、配色参考（如果有特定要求）、构图建议
+   - 配图建议要具体、可执行，便于后续图片生成时应用
+
 ## 输出格式（必须严格遵守，否则任务失败）：
 - **输出顺序**：首先输出【全局视觉指南】，然后才是各页面内容
 - 必须使用 <page> 标签作为每一页的分隔符（这是强制分隔符，必须在每一页前使用）
@@ -82,6 +115,7 @@ ${topic}
 - 每页必须包含【视觉元数据】部分（在页面类型标记之后，具体内容之前）
 - 页面内容要具体、详细，方便后续生成图片
 - 每页内容末尾必须包含"配图建议："，描述该页适合的配图场景（这是必需的，不能省略）
+- **配图建议必须与用户选择的风格匹配**（如果用户选择了特定风格）
 - 避免在内容中使用 | 竖线符号（会与 markdown 表格冲突）
 - 不要在输出中添加任何多余的内容或说明
 
@@ -89,7 +123,7 @@ ${topic}
 - 只生成一个封面页
 - 封面页必须包含完整的标题和副标题
 - 封面页的内容要简洁有力，适合作为小红书的头图
-- 配图建议要适合头图使用场景
+- 配图建议要适合头图使用场景，并符合用户选择的风格（如果有）
 
 ## 示例输出（当 ${PAGE_COUNT_VAR} 为1时）：
 
@@ -108,7 +142,7 @@ ${topic}
 - 布局模式：上下分割，标题占30%，配图占50%，留白占20%
 - 装饰风格：极简线条，温暖色调的几何图形
 
-标题：5分钟学会手冲咖啡☕
+标题：5分钟学会手冲咖啡
 副标题：新手也能做出咖啡店的味道
 背景：温馨的咖啡场景，一个家庭布局的咖啡角
 
@@ -131,7 +165,7 @@ ${topic}
 - 布局模式：上下分割，标题占30%，配图占50%，留白占20%
 - 装饰风格：极简线条，温暖色调的几何图形
 
-标题：5分钟学会手冲咖啡☕
+标题：5分钟学会手冲咖啡
 副标题：新手也能做出咖啡店的味道
 背景：温馨的咖啡场景，一个家庭布局的咖啡角
 
@@ -180,18 +214,21 @@ ${topic}
 ### 最后
 现在，请根据用户的主题生成大纲。记住：
 1. **首先输出【全局视觉指南】**，定义统一的配色、字体、布局、装饰和整体美学
+   ${style ? `**特别重要**：如果用户选择了「${styleName}」风格，【全局视觉指南】必须与该风格的要求匹配，包括配色、字体、布局、装饰元素等所有方面。` : ''}
 2. 严格使用 <page> 标签分割每一页
 3. 每页开头标注类型：[封面]、[内容]、[总结]
 4. **每页必须包含【视觉元数据】**，描述该页的视觉特征（与全局指南保持一致）
 5. **【配色统一性】所有内容页和总结页必须使用全局视觉指南中指定的主色调，不允许任何变体**
-6. 内容要详细、具体、专业、有价值
-7. 适合制作成小红书图文
-8. 每页末尾必须包含"配图建议："描述配图场景
-9. 避免使用竖线符号 | （会与 markdown 表格冲突）
-10. 【极端关键】必须生成恰好 ${PAGE_COUNT_VAR} 页，不能多也不能少
-11. 【数量检查】在开始生成前，请先规划好这 ${PAGE_COUNT_VAR} 页的内容结构，确保最终输出恰好 ${PAGE_COUNT_VAR} 页
-12. 【头图模式检查】如果 ${PAGE_COUNT_VAR} 为1，只生成一个封面页
-13. 【视觉一致性】确保所有页面的视觉元数据与全局视觉指南保持一致，这样可以保证并行生成的图片风格统一
+6. **【封面标题要求】封面页（首图）主标题不得使用 emoji，保持简洁专业**
+7. 内容要详细、具体、专业、有价值
+8. 适合制作成小红书图文
+9. 每页末尾必须包含"配图建议："描述配图场景
+   ${style ? `**特别重要**：每页的配图建议必须考虑「${styleName}」风格的特点，确保配图场景、视觉元素、配色等与该风格匹配。` : ''}
+10. 避免使用竖线符号 | （会与 markdown 表格冲突）
+11. 【极端关键】必须生成恰好 ${PAGE_COUNT_VAR} 页，不能多也不能少
+12. 【数量检查】在开始生成前，请先规划好这 ${PAGE_COUNT_VAR} 页的内容结构，确保最终输出恰好 ${PAGE_COUNT_VAR} 页
+13. 【头图模式检查】如果 ${PAGE_COUNT_VAR} 为1，只生成一个封面页
+14. 【视觉一致性】确保所有页面的视觉元数据与全局视觉指南保持一致，这样可以保证并行生成的图片风格统一
 
 【特别的！！注意】直接给出大纲内容（不要有任何多余的说明，也就是你直接从【全局视觉指南】开始，不要有针对用户的回应对话），请输出：`
   
@@ -379,7 +416,9 @@ ${topic}
       index: 0,
       type: 'content',
       content: result.text,
-      imagePrompt: `根据主题 "${topic}" 生成一张内容图片`
+      imagePrompt: style && styleName
+        ? `根据主题 "${topic}" 生成一张内容图片，符合「${styleName}」风格要求`
+        : `根据主题 "${topic}" 生成一张内容图片`
     })
   }
   
@@ -398,8 +437,10 @@ ${topic}
     coverPage = {
       index: 0,
       type: 'cover',
-      content: `📌 ${topic}\n\n开始你的精彩内容之旅`,
-      imagePrompt: `根据主题 "${topic}" 生成一张吸引人的封面图片`
+      content: `${topic}\n\n开始你的精彩内容之旅`,
+      imagePrompt: style && styleName 
+        ? `根据主题 "${topic}" 生成一张吸引人的封面图片，符合「${styleName}」风格要求`
+        : `根据主题 "${topic}" 生成一张吸引人的封面图片`
     }
   }
   
@@ -462,7 +503,9 @@ ${topic}
           index: newIndex,
           type: 'content',
           content: `第${newIndex + 1}页：深入探讨${topic}的相关内容，提供更多有价值的信息和见解。`,
-          imagePrompt: `根据页面内容和主题 "${topic}" 生成一张内容图片`
+          imagePrompt: style && styleName
+            ? `根据页面内容和主题 "${topic}" 生成一张内容图片，符合「${styleName}」风格要求`
+            : `根据页面内容和主题 "${topic}" 生成一张内容图片`
         }
         adjustedPages.push(newPage)
         console.log('补充内容页:', { index: newPage.index, type: newPage.type })
@@ -488,7 +531,9 @@ ${topic}
         index: newIndex,
         type: 'content',
         content: `第${newIndex}页：深入探讨${topic}的相关内容，提供更多有价值的信息和见解。`,
-        imagePrompt: `根据页面内容和主题 "${topic}" 生成一张内容图片`
+        imagePrompt: style && styleName
+          ? `根据页面内容和主题 "${topic}" 生成一张内容图片，符合「${styleName}」风格要求`
+          : `根据页面内容和主题 "${topic}" 生成一张内容图片`
       })
     }
   }
@@ -497,7 +542,7 @@ ${topic}
   pages.forEach((p) => {
     if (!p.content || !p.content.trim()) {
       if (p.type === 'cover') {
-        p.content = `📌 ${topic}\n\n开始你的精彩内容之旅`
+        p.content = `${topic}\n\n开始你的精彩内容之旅`
       } else if (p.type === 'summary') {
         // 使用更自然的表达，避免AI化
         p.content = `围绕主题「${topic}」的关键要点回顾，用生活化的方式帮助读者记住重点。`
@@ -508,14 +553,20 @@ ${topic}
   })
   
   // 配图建议兜底：如果某些页没有配图建议，为其生成默认建议，避免编辑页下方为空
+  // 生成风格相关的提示词（如果用户选择了风格）
+  let styleHint = ''
+  if (style && styleName) {
+    styleHint = `，并符合「${styleName}」风格要求`
+  }
+  
   pages.forEach((p) => {
     if (!p.imagePrompt || !p.imagePrompt.trim()) {
       if (p.type === 'cover') {
-        p.imagePrompt = `生成一张与主题「${topic}」相关的吸睛封面配图，突出标题和整体氛围。`
+        p.imagePrompt = `生成一张与主题「${topic}」相关的吸睛封面配图，突出标题和整体氛围${styleHint}。`
       } else if (p.type === 'summary') {
-        p.imagePrompt = `生成一张与主题「${topic}」相关的配图，用清晰的信息图或要点列表的方式呈现关键信息，风格自然不刻意。`
+        p.imagePrompt = `生成一张与主题「${topic}」相关的配图，用清晰的信息图或要点列表的方式呈现关键信息${styleHint}。`
       } else {
-        p.imagePrompt = `根据本页内容生成一张小红书风格的配图，突出关键信息和视觉对比效果。`
+        p.imagePrompt = `根据本页内容生成一张小红书风格的配图，突出关键信息和视觉对比效果${styleHint}。`
       }
     }
   })

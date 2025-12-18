@@ -82,6 +82,9 @@ export interface TextGeneratorState {
 
   // 历史记录ID
   recordId: string | null
+
+  // 导航守卫提示显示状态
+  showNavigationGuard: boolean
 }
 
 const STORAGE_KEY = 'text-generator-state'
@@ -151,7 +154,8 @@ export const useTextGeneratorStore = defineStore('textGenerator', {
       },
       images: saved.images || [],
       taskId: saved.taskId || null,
-      recordId: saved.recordId || null
+      recordId: saved.recordId || null,
+      showNavigationGuard: false
     }
   },
 
@@ -519,6 +523,7 @@ export const useTextGeneratorStore = defineStore('textGenerator', {
       this.images = []
       this.taskId = null
       this.recordId = null
+      this.showNavigationGuard = false
       localStorage.removeItem(STORAGE_KEY)
     },
 
@@ -536,6 +541,16 @@ export const useTextGeneratorStore = defineStore('textGenerator', {
         this.saveToStorage()
         ;(this as any)._saveTimer = null
       }, 500) // 500ms 防抖
+    },
+
+    // 显示导航守卫提示
+    showNavigationGuardModal() {
+      this.showNavigationGuard = true
+    },
+
+    // 隐藏导航守卫提示
+    hideNavigationGuardModal() {
+      this.showNavigationGuard = false
     }
   }
 })

@@ -17,6 +17,9 @@
         <button class="btn" @click="startOver" style="background: white; border: 1px solid var(--border-color);">
           再来一篇
         </button>
+        <button class="btn btn-abandon" @click="handleAbandon">
+          放弃本次生成
+        </button>
       </div>
     </div>
 
@@ -443,6 +446,13 @@ const startOver = () => {
   router.push('/')
 }
 
+const handleAbandon = () => {
+  if (confirm('确定要放弃本次生成吗？放弃后所有生成的内容将无法恢复。')) {
+    store.reset()
+    router.push('/')
+  }
+}
+
 const downloadOne = (image: any) => {
   if (image.url) {
     const link = document.createElement('a')
@@ -807,6 +817,17 @@ const handleRegenerate = async (image: any) => {
 
 .btn-secondary:hover {
   background: var(--bg-body);
+}
+
+.btn-abandon {
+  background: white;
+  color: #ff4d4f;
+  border: 1px solid #ffccc7;
+}
+
+.btn-abandon:hover {
+  background: #fff1f0;
+  border-color: #ff4d4f;
 }
 </style>
 

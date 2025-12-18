@@ -70,6 +70,9 @@
               <option value="minimal_white">极简白</option>
               <option value="cyberpunk">赛博朋克</option>
               <option value="retro_vintage">复古怀旧</option>
+              <option value="klein_blue">克莱因蓝/瑞士主义</option>
+              <option value="dieter_rams">德国博朗风</option>
+              <option value="hermes_orange">爱马仕橙 & 深空灰</option>
             </select>
           </div>
           <div class="option-item">

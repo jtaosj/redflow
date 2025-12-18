@@ -86,16 +86,30 @@
     
     <!-- Toast 消息提示 -->
     <Toast />
+    
+    <!-- 导航守卫提示 -->
+    <NavigationGuardModal
+      :visible="store.showNavigationGuard"
+      @confirm="handleNavigationGuardConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { RouterView, RouterLink } from 'vue-router'
 import Toast from './components/ui/Toast.vue'
+import NavigationGuardModal from './components/NavigationGuardModal.vue'
+import { useTextGeneratorStore } from './stores/textGenerator'
+
+const store = useTextGeneratorStore()
+
+const handleNavigationGuardConfirm = () => {
+  store.hideNavigationGuardModal()
+}
 
 // 获取构建时间和版本号（如果已注入）
 const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : null
-const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.3.2'
+const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.3.4'
 
 // 格式化构建时间
 const formatBuildTime = (timeStr: string | null) => {
