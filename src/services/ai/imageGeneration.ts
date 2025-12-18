@@ -393,16 +393,49 @@ export async function generatePageImage(
     // 构建风格一致性要求（非封面页需要参考封面）
     // 如果提供了风格参数，所有页面都应该使用相同的用户选择风格
     let styleConsistencyNote = ''
-    if (style && stylePrompt) {
-      // 有用户选择的风格时，强调所有页面必须使用相同的风格
+    if (visualGuide) {
+      // 有全局视觉指南时，优先强调遵循全局视觉指南
       if (pageType === 'cover') {
-        styleConsistencyNote = `【风格一致性要求】这是封面页，后续所有内容页必须严格遵守本页的风格设定（${style}），保持整体风格统一。\n\n`
+        styleConsistencyNote = `【风格一致性要求 - 必须严格遵守】
+⚠️ 这是封面页，后续所有内容页必须严格遵守上述【全局视觉指南】的所有要求，保持整体风格统一。
+- 必须使用全局视觉指南中指定的主色调和辅助色调
+- 必须遵循全局视觉指南中的字体风格、布局风格和装饰元素
+- 必须保持与全局视觉指南一致的整体美学风格
+${style && stylePrompt ? `- 同时必须遵循用户选择的风格（${style}）` : ''}
+
+`
       } else {
-        styleConsistencyNote = `【风格一致性要求】必须与封面页使用完全相同的风格（${style}），确保所有页面风格统一。配色、布局、视觉元素都应保持一致。\n\n`
+        styleConsistencyNote = `【风格一致性要求 - 必须严格遵守】
+⚠️ 必须严格遵守上述【全局视觉指南】的所有要求，确保与封面页和其他页面风格完全统一。
+- 必须使用全局视觉指南中指定的主色调（不允许任何变体）
+- 必须遵循全局视觉指南中的字体风格、布局风格和装饰元素
+- 必须保持与全局视觉指南一致的整体美学风格
+- 配色、布局、视觉元素都必须与其他页面保持一致
+${style && stylePrompt ? `- 同时必须遵循用户选择的风格（${style}）` : ''}
+
+`
+      }
+    } else if (style && stylePrompt) {
+      // 没有全局视觉指南但有用户选择的风格时，强调所有页面必须使用相同的风格
+      if (pageType === 'cover') {
+        styleConsistencyNote = `【风格一致性要求 - 必须严格遵守】
+⚠️ 这是封面页，后续所有内容页必须严格遵守本页的风格设定（${style}），保持整体风格统一。
+- 配色、布局、视觉元素都必须保持一致
+
+`
+      } else {
+        styleConsistencyNote = `【风格一致性要求 - 必须严格遵守】
+⚠️ 必须与封面页使用完全相同的风格（${style}），确保所有页面风格统一。
+- 配色、布局、视觉元素都必须与封面页保持一致
+
+`
       }
     } else if (pageType !== 'cover') {
       // 没有明确风格时，参考封面页
-      styleConsistencyNote = `【风格一致性要求】参考封面页的风格，保持所有页面风格统一。\n\n`
+      styleConsistencyNote = `【风格一致性要求】
+⚠️ 参考封面页的风格，保持所有页面风格统一。
+
+`
     }
 
     // 构建通用设计要求（仅在无风格要求时使用，避免冲突）
@@ -424,7 +457,9 @@ export async function generatePageImage(
     
     // 构建全局视觉指南部分（最高优先级）
     const globalVisualGuide = visualGuide 
-      ? `【全局视觉指南 - 所有页面必须严格遵守】
+      ? `【全局视觉指南 - 所有页面必须严格遵守 - 最高优先级】
+⚠️ 这是保证所有页面风格统一的核心指南，必须严格遵守，不得违反 ⚠️
+
 主色调：${visualGuide.colorPalette.primary}
 辅助色调：${visualGuide.colorPalette.secondary.join('、')}
 字体风格：${visualGuide.typographyStyle}
@@ -437,6 +472,12 @@ export async function generatePageImage(
 - 总结页必须使用与内容页完全相同的主色调
 - 封面页可以使用上述主色调或兼容配色（建议使用上述主色调）
 - 违反此要求将导致帖子整体性被破坏
+
+【视觉元素一致性要求 - 必须严格遵守】
+- 字体风格必须与上述全局视觉指南保持一致
+- 布局风格必须遵循上述全局视觉指南的布局原则
+- 装饰元素风格必须与上述全局视觉指南保持一致
+- 整体美学风格必须与上述全局视觉指南保持一致
 
 `
       : ''
@@ -503,13 +544,15 @@ ${stylePrompt.trim()}${aestheticParams}
       }
     }
     
-    prompt = `${complianceNote}${globalVisualGuide}${pageVisualConstraint}${styleSection}${userImageSuggestion}${technicalSpecs}\n\n【页面内容】\n${safePageContent}\n\n【页面类型】${isHeadImageMode ? '头图页' : (pageType === 'cover' ? '封面页' : pageType === 'summary' ? '总结页' : '内容页')}\n\n${styleConsistencyNote}${genericDesignGuidance}${pageDesignRequirements}\n\n【上下文参考】\n用户原始需求：${topic}\n完整内容大纲：\n---\n${fullOutline}\n---`
+    prompt = `${complianceNote}${globalVisualGuide}${pageVisualConstraint}${styleSection}${userImageSuggestion}${technicalSpecs}\n\n【页面内容】\n${safePageContent}\n\n【页面类型】${isHeadImageMode ? '头图页' : (pageType === 'cover' ? '封面页' : pageType === 'summary' ? '总结页' : '内容页')}\n\n${styleConsistencyNote}${genericDesignGuidance}${pageDesignRequirements}\n\n【上下文参考】\n用户原始需求：${topic}`
   } else {
     // 使用自定义 prompt，但需要确保风格提示词被正确注入
     
     // 构建全局视觉指南部分（如果存在）
     const globalVisualGuideForCustom = visualGuide 
-      ? `【全局视觉指南 - 所有页面必须严格遵守】
+      ? `【全局视觉指南 - 所有页面必须严格遵守 - 最高优先级】
+⚠️ 这是保证所有页面风格统一的核心指南，必须严格遵守，不得违反 ⚠️
+
 主色调：${visualGuide.colorPalette.primary}
 辅助色调：${visualGuide.colorPalette.secondary.join('、')}
 字体风格：${visualGuide.typographyStyle}
@@ -522,6 +565,12 @@ ${stylePrompt.trim()}${aestheticParams}
 - 总结页必须使用与内容页完全相同的主色调
 - 封面页可以使用上述主色调或兼容配色（建议使用上述主色调）
 - 违反此要求将导致帖子整体性被破坏
+
+【视觉元素一致性要求 - 必须严格遵守】
+- 字体风格必须与上述全局视觉指南保持一致
+- 布局风格必须遵循上述全局视觉指南的布局原则
+- 装饰元素风格必须与上述全局视觉指南保持一致
+- 整体美学风格必须与上述全局视觉指南保持一致
 
 `
       : ''
@@ -571,13 +620,15 @@ ${constraintLines.join('\n')}
     }
     
     // 替换自定义prompt中的变量
+    // 注意：已移除 {{full_outline}} 变量替换，避免大纲内容污染图片生成
+    // 如需风格一致性，请使用 visualGuide 参数，它已包含所有必要的风格信息
     prompt = (customPrompt || '')
       .replace(/\{\{page_content\}\}/g, pageContent)
       .replace(/\{\{page_type\}\}/g, pageType)
       .replace(/\{\{page_index\}\}/g, String(pageIndex + 1))
       .replace(/\{\{total_pages\}\}/g, String(totalPages))
       .replace(/\{\{topic\}\}/g, topic)
-      .replace(/\{\{full_outline\}\}/g, fullOutline)
+      .replace(/\{\{full_outline\}\}/g, '') // 已移除，避免内容污染
       .replace(/\{\{style_prompt\}\}/g, stylePrompt || '')
       .replace(/\{\{image_prompt\}\}/g, imagePrompt || '')
       .replace(/\{\{title_color\}\}/g, '')
