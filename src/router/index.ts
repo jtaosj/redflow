@@ -59,10 +59,24 @@ const generationFlowRoutes = ['/text-outline', '/text-generate', '/text-result']
 router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, next: NavigationGuardNext) => {
   const store = useTextGeneratorStore()
   
-  // 检查是否在生成过程中（stage 不是 'input' 就表示在生成过程中）
-  const isGenerating = store.stage !== 'input'
+  // 检查是否在图片生成过程中（需要路由守卫保护）
+  // 1. 大纲阶段（stage === 'outline'）：允许自由导航，内容已保存在localStorage中，用户可以查看历史记录等
+  // 2. 图片生成过程中（progress.status === 'generating'）：需要保护，阻止导航到受保护的路由
+  // 3. 生成完成后（stage === 'result' 且 progress.status === 'done'）：允许自由导航
+  const isActuallyGenerating = store.progress.status === 'generating'
   
-  if (isGenerating) {
+  // 生成已完成，允许自由导航
+  const isCompleted = store.stage === 'result' && store.progress.status === 'done'
+  
+  // 如果生成已完成，允许自由导航
+  if (isCompleted) {
+    store.hideNavigationGuardModal()
+    next()
+    return
+  }
+  
+  // 只有在图片生成过程中才阻止导航
+  if (isActuallyGenerating) {
     // 如果在生成过程中，检查目标路由
     // 允许访问生成流程路由（即使正在生成中）
     if (generationFlowRoutes.includes(to.path)) {

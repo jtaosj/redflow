@@ -293,6 +293,14 @@
       @close="handleCloseDetailModal"
       @copyConfig="handleCopyCaseConfig"
     />
+    
+    <!-- 继续编辑提示模态框 -->
+    <ContinueEditModal
+      :visible="showContinueEditModal"
+      :pagesCount="textStore.outline.pages.length"
+      @confirm="handleContinueEditConfirm"
+      @cancel="handleContinueEditCancel"
+    />
   </PageContainer>
 </template>
 
@@ -309,6 +317,7 @@ import StyleExampleCard from '../components/StyleExampleCard.vue'
 import CaseCard from '../components/CaseCard.vue'
 import CaseFilter from '../components/CaseFilter.vue'
 import CaseDetailModal from '../components/CaseDetailModal.vue'
+import ContinueEditModal from '../components/ContinueEditModal.vue'
 import { useTextGeneratorStore } from '../stores/textGenerator'
 import { PageContainer, PageHeader } from '../components/layout'
 import { Button } from '../components/ui'
@@ -369,6 +378,7 @@ const caseCategories: any = caseData.getAllCategories
 const filteredCases: any = caseData.filteredCases
 const selectedCase = ref<CaseItem | null>(null)
 const showDetailModal = ref(false)
+const showContinueEditModal = ref(false)
 
 /**
  * 处理案例筛选变化
@@ -431,28 +441,6 @@ const handlePromptMode = () => {
   router.push('/prompt-generate')
 }
 
-/**
- * 静默发送调试日志（不显示错误）
- * 用于向本地调试服务器发送日志，如果服务器不可用则静默失败
- */
-const sendDebugLog = (data: any) => {
-  // 使用 AbortController 设置短超时，避免长时间等待
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 100) // 100ms 超时
-  
-  fetch('http://127.0.0.1:7242/ingest/cd787270-e269-4164-9504-344731b7326c', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-    signal: controller.signal
-  })
-    .catch(() => {
-      // 完全静默失败，不输出任何错误
-    })
-    .finally(() => {
-      clearTimeout(timeoutId)
-    })
-}
 const processingMode = ref<'SINGLE' | 'BATCH'>('SINGLE')
 const topic = ref('')
 const loading = ref(false)
@@ -512,7 +500,8 @@ const handleFileSelect = (e: Event) => {
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
-const handleGenerateOutline = async () => {
+// 生成新大纲的函数
+const generateNewOutline = async () => {
   if (!topic.value.trim()) return
   
   // 持久化用户选择
@@ -544,65 +533,13 @@ const handleGenerateOutline = async () => {
     // 头图模式下强制设置图片数量为1
     const finalImageCount = isHeadImageMode.value ? 1 : imageCount.value
     
-    // #region agent log
-    sendDebugLog({
-      location: 'HomeView.vue:514',
-      message: 'handleGenerateOutline: 头图模式判断',
-      data: {
-        isHeadImageMode: isHeadImageMode.value,
-        imageCount: imageCount.value,
-        finalImageCount: finalImageCount
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A'
-    })
-    // #endregion
-    
-    console.log('=== handleGenerateOutline 调试信息 ===')
-    console.log('isHeadImageMode:', isHeadImageMode.value)
-    console.log('imageCount:', imageCount.value)
-    console.log('finalImageCount:', finalImageCount)
-    
     // 生成大纲时传递风格信息，确保配图建议与风格一致
     const res = await generateOutline(topic.value, finalImageCount, textStyle.value)
-    
-    // #region agent log
-    sendDebugLog({
-      location: 'HomeView.vue:523',
-      message: 'handleGenerateOutline: 大纲生成完成',
-      data: {
-        pagesCount: res.pages.length,
-        pages: res.pages.map((p: any) => ({ index: p.index, type: p.type })),
-        targetPageCount: finalImageCount
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'B'
-    })
-    // #endregion
     
     console.log('大纲生成成功:', res)
     
     // 保存头图模式状态到store
     textStore.setHeadImageMode(isHeadImageMode.value)
-    
-    // #region agent log
-    sendDebugLog({
-      location: 'HomeView.vue:526',
-      message: 'handleGenerateOutline: 设置头图模式到store',
-      data: {
-        headImageMode: isHeadImageMode.value,
-        storeHeadImageMode: textStore.headImageMode
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'A'
-    })
-    // #endregion
     
     // 保存到store并跳转到大纲编辑页面（带上配图建议和视觉元数据）
     textStore.setOutline(res.outline, res.pages.map((p: any) => ({
@@ -621,6 +558,32 @@ const handleGenerateOutline = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleGenerateOutline = async () => {
+  if (!topic.value.trim()) return
+  
+  // 检查是否已有大纲内容（从历史记录返回或之前生成的大纲）
+  if (textStore.outline.pages.length > 0 && textStore.stage === 'outline') {
+    // 如果已有大纲，显示模态框提示用户
+    showContinueEditModal.value = true
+    return
+  }
+  
+  // 继续生成新大纲
+  await generateNewOutline()
+}
+
+// 处理继续编辑模态框确认
+const handleContinueEditConfirm = () => {
+  showContinueEditModal.value = false
+  router.push('/text-outline')
+}
+
+// 处理继续编辑模态框取消（重新生成）
+const handleContinueEditCancel = async () => {
+  showContinueEditModal.value = false
+  await generateNewOutline()
 }
 
 // AI智能配置
