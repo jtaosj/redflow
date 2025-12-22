@@ -345,9 +345,23 @@ const startGenerationTask = async () => {
     
     const taskDuration = Date.now() - taskStartTime
     console.log(`=== [${taskId}] 生成任务完成，耗时: ${taskDuration}ms ===`)
+    
+    // 检查所有图片是否都已完成（成功或失败），如果是则更新状态
+    if (store.areAllImagesFinished && store.progress.status === 'generating') {
+      console.log(`[${taskId}] 所有图片都已完成，更新进度状态为 done`)
+      const finalTaskId = taskId
+      store.finishGeneration(finalTaskId)
+    }
   } finally {
     isGeneratingTask = false
     console.log(`[${taskId}] 生成任务状态已重置`)
+    
+    // 再次检查：如果所有图片都已完成但状态还是 generating，强制更新状态
+    if (store.areAllImagesFinished && store.progress.status === 'generating') {
+      console.log(`[${taskId}] ⚠️ 检测到所有图片已完成但状态未更新，强制更新状态`)
+      const finalTaskId = taskId
+      store.finishGeneration(finalTaskId)
+    }
   }
 }
 

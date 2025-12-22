@@ -75,6 +75,20 @@ router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, n
     return
   }
   
+  // 关键修复：如果所有图片都已完成（成功或失败），即使状态还是 generating，也允许导航
+  // 这解决了生图失败后状态未更新导致的死循环问题
+  if (isActuallyGenerating && store.areAllImagesFinished) {
+    console.log('🔓 [路由守卫] 检测到所有图片已完成，允许导航（修复死循环）')
+    // 如果状态还是 generating，强制更新为 done
+    if (store.progress.status === 'generating') {
+      const taskId = 'task_' + Date.now()
+      store.finishGeneration(taskId)
+    }
+    store.hideNavigationGuardModal()
+    next()
+    return
+  }
+  
   // 只有在图片生成过程中才阻止导航
   if (isActuallyGenerating) {
     // 如果在生成过程中，检查目标路由
