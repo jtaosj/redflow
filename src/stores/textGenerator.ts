@@ -271,6 +271,28 @@ export const useTextGeneratorStore = defineStore('textGenerator', {
       }
       
       return result
+    },
+
+    // 检查所有图片是否都已完成（成功或失败）
+    areAllImagesFinished(): boolean {
+      const pagesToGenerate = this.getPagesToGenerate
+      if (pagesToGenerate.length === 0) return false
+      
+      const result = pagesToGenerate.every(page => {
+        const image = this.images.find(img => img.index === page.index)
+        // 图片已完成：状态为 'done' 或 'error'（不再处于 'generating' 或 'retrying' 状态）
+        return image && (image.status === 'done' || image.status === 'error')
+      })
+      
+      if (import.meta.env.DEV) {
+        console.log('🔍 [Store] areAllImagesFinished 检查:', {
+          pagesToGenerateCount: pagesToGenerate.length,
+          result,
+          imagesStatus: this.images.map(img => ({ index: img.index, status: img.status }))
+        })
+      }
+      
+      return result
     }
   },
 
