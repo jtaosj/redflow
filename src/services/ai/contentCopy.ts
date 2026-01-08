@@ -51,7 +51,7 @@ export async function generateContentCopy(
 - 不得体现任何与prompt有关的内容。
 - 格式排版
 1. 标题不带书名号且必须20个字。
-2. 输出内容以清晰段落形式呈现。全文除去标题外不超过700字。
+2. **字数限制（最重要）：正文部分（不包括标题）必须严格控制在700字以内，绝对不得超过700字。生成完成后请自行检查字数，如果超过700字必须重新精简。**
 3. 正文部分简洁明了，文字前加上对应的emoji，段后可少量添加emoji表情。
 4. 整体排版多提行，不同内容另起一行，并用分隔符隔开。
 
@@ -105,9 +105,12 @@ ${pagesSummary}
 
 请根据以上大纲内容和要求，生成一篇完整的小红书风格帖子文案。
 
-【重要提示】每次生成时请确保内容的独特性和新鲜感，避免使用相同的表达方式和结构，让每次生成的文案都有不同的创意角度和表达风格。`
+【重要提示 - 请严格遵守】
+1. **字数限制（最高优先级）：正文部分（不包括标题）必须严格控制在700字以内，绝对不得超过700字。这是硬性要求，必须严格遵守。如果大纲内容较多，请选择最重要的要点进行展开，确保在700字限制内完成一篇完整、有逻辑的文案。**
+2. 每次生成时请确保内容的独特性和新鲜感，避免使用相同的表达方式和结构，让每次生成的文案都有不同的创意角度和表达风格。
+3. 生成完成后，请自行检查正文字数，确保不超过700字。如果超过，必须精简内容直到符合要求。`
 
-  const systemPrompt = '你是一位专业的小红书内容创作助手，擅长将内容大纲转化为符合小红书风格的优质帖子。'
+  const systemPrompt = '你是一位专业的小红书内容创作助手，擅长将内容大纲转化为符合小红书风格的优质帖子。你必须严格遵守字数限制：正文部分（不包括标题）必须控制在700字以内，绝对不得超过700字。'
 
   try {
     // 检查API Key
@@ -132,18 +135,39 @@ ${pagesSummary}
     const startTime = Date.now()
     // 为文案生成使用更高的 temperature 和 top_p，增加输出多样性
     // temperature: 0.9 提高随机性，top_p: 0.95 使用核采样增加多样性
+    // max_tokens: 600 严格限制最大输出长度
+    // 考虑到 DeepSeek tokenizer 对中文的编码效率，600 tokens 应该能确保正文不超过700字
+    // 如果仍然超过，说明模型没有严格遵守 prompt 约束，需要进一步调整
     const result = await callDeepSeekAPI(prompt, systemPrompt, {
-      temperature: 0.9,
-      top_p: 0.95,
-      max_tokens: 2000 // 确保有足够长度生成完整文案
+      temperature: 0.7, // 降低 temperature 以提高对约束的遵守度
+      top_p: 0.9, // 降低 top_p 以减少随机性
+      max_tokens: 600 // 更严格的限制：确保输出不超过700字
     })
     const duration = Date.now() - startTime
     
+    // 检查生成内容的字数（不包括标题）
+    const lines = result.text.split('\n')
+    const title = lines[0] || ''
+    const bodyText = lines.length > 1 ? lines.slice(1).join('\n') : result.text.substring(title.length).trim()
+    const bodyLength = bodyText.length
+    
     logger.info('✅ [文案生成] DeepSeek API调用成功', { 
-      contentLength: result.text.length, 
+      totalLength: result.text.length,
+      titleLength: title.length,
+      bodyLength: bodyLength,
       usage: result.usage,
       duration: `${duration}ms`
     })
+    
+    // 如果正文超过700字，记录警告（但不截断，因为用户要求不截断）
+    if (bodyLength > 700) {
+      logger.warn('⚠️ [文案生成] 生成的文案正文超过700字限制', {
+        bodyLength,
+        titleLength: title.length,
+        totalLength: result.text.length,
+        exceededBy: bodyLength - 700
+      })
+    }
     
     return {
       content: result.text,
